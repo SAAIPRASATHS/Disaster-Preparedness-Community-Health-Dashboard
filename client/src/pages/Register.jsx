@@ -14,7 +14,10 @@ export default function Register() {
     const toast = useToast();
 
     const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
-    const setNum = (key) => (e) => setForm((p) => ({ ...p, [key]: parseInt(e.target.value) || 0 }));
+    const setNum = (key) => (e) => {
+        const val = parseInt(e.target.value) || 0;
+        setForm((p) => ({ ...p, [key]: key === 'familyMembers' ? Math.max(1, val) : val }));
+    };
     const toggleCondition = (c) =>
         setForm((p) => ({ ...p, conditions: p.conditions.includes(c) ? p.conditions.filter((x) => x !== c) : [...p.conditions, c] }));
 

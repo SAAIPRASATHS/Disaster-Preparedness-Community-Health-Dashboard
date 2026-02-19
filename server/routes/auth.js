@@ -44,8 +44,12 @@ router.post('/register', async (req, res) => {
         if (err.code === 11000) {
             return res.status(409).json({ error: 'An account with this email already exists' });
         }
-        console.error('Registration error:', err.message);
-        res.status(500).json({ error: 'Registration failed' });
+        console.error('❌ Registration error detail:', {
+            message: err.message,
+            stack: err.stack,
+            body: req.body
+        });
+        res.status(500).json({ error: `Registration failed: ${err.message}` });
     }
 });
 
