@@ -38,4 +38,19 @@ export const resolveComplaint = (id) => API.put(`/complaint/${id}/resolve`);
 // Live Alerts API
 export const fetchLiveAlerts = () => API.get('/live-alert');
 
+// Chat API (Groq)
+export const sendChatMessage = (messages) => API.post('/chat', { messages });
+
+// Weather API (Open-Meteo — no key needed)
+export const fetchWeather = (lat, lon) => API.get(`/weather?lat=${lat}&lon=${lon}`);
+export const fetchWeatherByCity = (city) => API.get(`/weather?city=${encodeURIComponent(city)}`);
+
+// Air Quality API (Open-Meteo — no key needed)
+export const fetchAirQuality = (lat, lon) => API.get(`/airquality?lat=${lat}&lon=${lon}`);
+export const fetchAirQualityByCity = (city) => API.get(`/airquality?city=${encodeURIComponent(city)}`);
+
+// Pollen API (Open-Meteo — no key needed)
+export const fetchPollen = (lat, lon) => API.get(`/pollen?lat=${lat}&lon=${lon}`);
+export const fetchPollenByCity = (city) => API.get(`/pollen?city=${encodeURIComponent(city)}`);
+
 export default API;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { motion } from 'framer-motion';
+import API from '../api';
 
 const WeatherWidget = () => {
     const [weather, setWeather] = useState(null);
@@ -9,26 +10,20 @@ const WeatherWidget = () => {
     useEffect(() => {
         const fetchWeather = async (lat, lon) => {
             try {
-                const response = await axios.get(`/api/weather?lat=${lat}&lon=${lon}`);
-                setWeather(response.data);
-                setLoading(false);
+                const { data } = await API.get(`/weather?lat=${lat}&lon=${lon}`);
+                setWeather(data);
             } catch (err) {
                 console.error('Weather error:', err);
                 setError('Failed to load weather');
+            } finally {
                 setLoading(false);
             }
         };
 
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    fetchWeather(position.coords.latitude, position.coords.longitude);
-                },
-                () => {
-                    // Default to a fallback or just show error
-                    setError('Location permission denied');
-                    setLoading(false);
-                }
+                (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+                () => { setError('Location permission denied'); setLoading(false); }
             );
         } else {
             setError('Geolocation not supported');
@@ -36,34 +31,59 @@ const WeatherWidget = () => {
         }
     }, []);
 
-    if (loading) return <div className="bg-white p-4 rounded-2xl shadow-sm animate-pulse h-32 flex items-center justify-center">Loading weather...</div>;
-    if (error) return <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm">{error}</div>;
+    if (loading) return (
+        <div className="bg-gradient-to-br from-blue-500 to-blue-700 p-6 rounded-2xl shadow-lg animate-pulse h-44 flex items-center justify-center text-white/60">
+            Loading weather...
+        </div>
+    );
+    if (error) return <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm border border-red-100">{error}</div>;
     if (!weather) return null;
 
-    const { main, weather: w, name } = weather;
-    const iconUrl = `https://openweathermap.org/img/wn/${w[0].icon}@2x.png`;
+    const { current, forecast, name } = weather;
 
     return (
-        <div className="bg-gradient-to-br from-blue-500 to-blue-700 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden group">
-            <div className="relative z-10">
-                <div className="flex justify-between items-start">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white rounded-2xl shadow-lg overflow-hidden"
+        >
+            {/* Current Weather */}
+            <div className="p-6 relative">
+                <div className="relative z-10 flex justify-between items-start">
                     <div>
-                        <p className="text-blue-100 text-sm font-medium uppercase tracking-wider">{name}</p>
-                        <h3 className="text-4xl font-bold mt-1">{Math.round(main.temp)}°C</h3>
+                        <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest">📍 {name}</p>
+                        <h3 className="text-5xl font-extrabold mt-1">{Math.round(current.temp)}°C</h3>
+                        <p className="text-blue-100 mt-1 text-sm font-medium">{current.icon} {current.description}</p>
                     </div>
-                    <img src={iconUrl} alt={w[0].description} className="w-20 h-20 -mt-4 -mr-2 drop-shadow-lg" />
+                    <div className="text-right space-y-1 text-xs text-blue-200">
+                        <p>Feels like <span className="text-white font-bold">{Math.round(current.feelsLike)}°C</span></p>
+                        <p>Humidity <span className="text-white font-bold">{current.humidity}%</span></p>
+                        <p>Wind <span className="text-white font-bold">{current.windSpeed} km/h</span></p>
+                        {current.rain > 0 && <p>Rain <span className="text-white font-bold">{current.rain} mm</span></p>}
+                    </div>
                 </div>
-                <div className="mt-2 text-blue-100 font-medium">
-                    {w[0].main} — {w[0].description}
-                </div>
-                <div className="mt-4 flex space-x-4 text-xs text-blue-200">
-                    <span>Humidity: {main.humidity}%</span>
-                    <span>Feels like: {Math.round(main.feels_like)}°C</span>
-                </div>
+                <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 blur-2xl" />
             </div>
-            {/* Subtle background decoration */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/20 transition-colors" />
-        </div>
+
+            {/* 7-Day Forecast */}
+            {forecast && forecast.length > 0 && (
+                <div className="bg-black/10 backdrop-blur-sm px-6 py-4 border-t border-white/10">
+                    <p className="text-[10px] text-blue-200 font-semibold uppercase tracking-widest mb-3">7-Day Forecast</p>
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                        {forecast.map((day, i) => (
+                            <div key={i} className="group">
+                                <p className="text-[10px] text-blue-300 font-medium">
+                                    {new Date(day.date).toLocaleDateString('en', { weekday: 'short' })}
+                                </p>
+                                <p className="text-lg my-0.5">{day.icon}</p>
+                                <p className="text-xs font-bold">{Math.round(day.tempMax)}°</p>
+                                <p className="text-[10px] text-blue-300">{Math.round(day.tempMin)}°</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </motion.div>
     );
 };
 

@@ -6,7 +6,7 @@ const RISK_THRESHOLDS = {
     cyclone: { windSpeed: 70 },
 };
 
-/* ── Fallback weather for when OpenWeather is unavailable ── */
+/* ── Fallback weather for when APIs are unavailable ── */
 const FALLBACK_WEATHER = {
     Mumbai: { temp: 32, humidity: 82, windSpeed: '14.4', rainfall: 12, description: 'scattered clouds' },
     Delhi: { temp: 38, humidity: 55, windSpeed: '11.2', rainfall: 0, description: 'haze' },
@@ -14,6 +14,18 @@ const FALLBACK_WEATHER = {
     Kolkata: { temp: 33, humidity: 80, windSpeed: '12.6', rainfall: 5, description: 'partly cloudy' },
     Bangalore: { temp: 28, humidity: 65, windSpeed: '9.7', rainfall: 2, description: 'clear sky' },
     default: { temp: 30, humidity: 70, windSpeed: '12.0', rainfall: 3, description: 'partly cloudy' },
+};
+
+const WMO_DESCRIPTIONS = {
+    0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+    45: 'Foggy', 48: 'Rime fog', 51: 'Light drizzle', 53: 'Moderate drizzle',
+    55: 'Dense drizzle', 56: 'Light freezing drizzle', 57: 'Dense freezing drizzle',
+    61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+    66: 'Light freezing rain', 67: 'Heavy freezing rain',
+    71: 'Slight snowfall', 73: 'Moderate snowfall', 75: 'Heavy snowfall',
+    77: 'Snow grains', 80: 'Slight rain showers', 81: 'Moderate rain showers',
+    82: 'Violent rain showers', 85: 'Slight snow showers', 86: 'Heavy snow showers',
+    95: 'Thunderstorm', 96: 'Thunderstorm with slight hail', 99: 'Thunderstorm with heavy hail',
 };
 
 function getFallbackWeather(city) {
@@ -110,8 +122,21 @@ function buildRisks(weather) {
 }
 
 /**
- * Fetch weather from OpenWeatherMap and convert to disaster risk assessment.
- * Falls back to mock data if the API key is missing or the request fails.
+ * Geocode a city name to lat/lon using Open-Meteo Geocoding API (free, no key).
+ */
+async function geocodeCity(city) {
+    const { data } = await axios.get('https://geocoding-api.open-meteo.com/v1/search', {
+        params: { name: city, count: 1, language: 'en', format: 'json' },
+    });
+    if (!data.results || data.results.length === 0) {
+        throw new Error(`City "${city}" not found`);
+    }
+    return data.results[0];
+}
+
+/**
+ * Fetch weather from Open-Meteo (free, no API key) and convert to disaster risk assessment.
+ * Falls back to mock data if the request fails.
  */
 async function assessRisk(city) {
     let weather;
@@ -120,31 +145,35 @@ async function assessRisk(city) {
     let isFallback = false;
 
     try {
-        const apiKey = process.env.WEATHER_API_KEY;
-        if (!apiKey || apiKey.includes('your_')) {
-            throw new Error('Weather API key not configured');
-        }
-        const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`;
-        const { data } = await axios.get(url);
+        const geo = await geocodeCity(city);
+        cityName = geo.name;
+        country = geo.country_code || 'IN';
 
+        const { data } = await axios.get('https://api.open-meteo.com/v1/forecast', {
+            params: {
+                latitude: geo.latitude,
+                longitude: geo.longitude,
+                current: 'temperature_2m,relative_humidity_2m,wind_speed_10m,rain,weather_code',
+                timezone: 'auto',
+            },
+        });
+
+        const c = data.current;
         weather = {
-            temp: data.main.temp,
-            humidity: data.main.humidity,
-            windSpeed: (data.wind.speed * 3.6).toFixed(1),
-            rainfall: data.rain ? data.rain['1h'] || data.rain['3h'] || 0 : 0,
-            description: data.weather[0].description,
+            temp: c.temperature_2m,
+            humidity: c.relative_humidity_2m,
+            windSpeed: c.wind_speed_10m.toFixed(1),
+            rainfall: c.rain || 0,
+            description: WMO_DESCRIPTIONS[c.weather_code] || 'Unknown',
         };
-        cityName = data.name;
-        country = data.sys.country;
     } catch (err) {
-        console.warn(`⚠️  Weather API fallback for "${city}":`, err.message);
+        console.warn(`⚠️  Open-Meteo fallback for "${city}":`, err.message);
         weather = getFallbackWeather(city);
         isFallback = true;
     }
 
     const risks = buildRisks(weather);
 
-    // Generate 24h/48h risk timeline projection
     const riskTimeline = {
         next24h: risks.map((r) => ({
             disasterType: r.disasterType,

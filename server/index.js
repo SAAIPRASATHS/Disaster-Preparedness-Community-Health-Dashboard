@@ -17,6 +17,8 @@ const sosRoutes = require('./routes/sos');
 const liveAlertRoutes = require('./routes/liveAlert');
 const chatRoutes = require('./routes/chat');
 const weatherRoutes = require('./routes/weather');
+const airqualityRoutes = require('./routes/airquality');
+const pollenRoutes = require('./routes/pollen');
 
 const app = express();
 const server = http.createServer(app);
@@ -59,6 +61,8 @@ app.use('/api/sos', verifyToken, sosRoutes);
 app.use('/api/live-alert', liveAlertRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/weather', weatherRoutes);
+app.use('/api/airquality', airqualityRoutes);
+app.use('/api/pollen', pollenRoutes);
 
 // Health check
 app.get('/', (_req, res) => {

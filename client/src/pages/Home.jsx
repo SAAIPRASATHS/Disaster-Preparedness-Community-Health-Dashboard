@@ -3,6 +3,8 @@ import { fetchRisk, fetchChecklist } from '../api';
 import RiskCard from '../components/RiskCard';
 import ChecklistCard from '../components/ChecklistCard';
 import WeatherWidget from '../components/WeatherWidget';
+import AirQualityWidget from '../components/AirQualityWidget';
+import PollenWidget from '../components/PollenWidget';
 import { PageTransition, AnimatedCard, CardSkeleton } from '../components/Motion';
 import { useToast } from '../components/Toast';
 
@@ -74,8 +76,12 @@ export default function Home() {
                 </p>
             </div>
 
-            <div className="max-w-2xl mx-auto mb-8">
+            <div className="max-w-2xl mx-auto mb-8 space-y-4">
                 <WeatherWidget />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <AirQualityWidget />
+                    <PollenWidget />
+                </div>
             </div>
 
             {/* Search */}
