@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { fetchRisk, fetchChecklist } from '../api';
 import RiskCard from '../components/RiskCard';
 import ChecklistCard from '../components/ChecklistCard';
+import WeatherWidget from '../components/WeatherWidget';
 import { PageTransition, AnimatedCard, CardSkeleton } from '../components/Motion';
 import { useToast } from '../components/Toast';
 
@@ -71,6 +72,10 @@ export default function Home() {
                 <p className="text-secondary max-w-xl mx-auto text-sm md:text-base">
                     Enter your city for real-time disaster risk analysis with personalized preparedness recommendations.
                 </p>
+            </div>
+
+            <div className="max-w-2xl mx-auto mb-8">
+                <WeatherWidget />
             </div>
 
             {/* Search */}
@@ -186,8 +191,8 @@ export default function Home() {
                                         <div key={i} className="flex items-center justify-between text-sm py-1">
                                             <span className="text-dark">{r.disasterType}</span>
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.projectedRisk === 'HIGH' ? 'bg-red-100 text-risk-high'
-                                                    : r.projectedRisk === 'MEDIUM' ? 'bg-amber-100 text-warning'
-                                                        : 'bg-emerald-100 text-risk-low'
+                                                : r.projectedRisk === 'MEDIUM' ? 'bg-amber-100 text-warning'
+                                                    : 'bg-emerald-100 text-risk-low'
                                                 }`}>
                                                 {r.trend === 'increasing' ? '↑' : '→'} {r.projectedRisk}
                                             </span>
@@ -200,8 +205,8 @@ export default function Home() {
                                         <div key={i} className="flex items-center justify-between text-sm py-1">
                                             <span className="text-dark">{r.disasterType}</span>
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.projectedRisk === 'HIGH' ? 'bg-red-100 text-risk-high'
-                                                    : r.projectedRisk === 'MEDIUM' ? 'bg-amber-100 text-warning'
-                                                        : 'bg-emerald-100 text-risk-low'
+                                                : r.projectedRisk === 'MEDIUM' ? 'bg-amber-100 text-warning'
+                                                    : 'bg-emerald-100 text-risk-low'
                                                 }`}>
                                                 {r.trend === 'increasing' ? '↑' : r.trend === 'decreasing' ? '↓' : '→'} {r.projectedRisk}
                                             </span>

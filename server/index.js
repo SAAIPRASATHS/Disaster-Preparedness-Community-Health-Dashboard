@@ -15,6 +15,8 @@ const clusterRoutes = require('./routes/cluster');
 const complaintRoutes = require('./routes/complaint');
 const sosRoutes = require('./routes/sos');
 const liveAlertRoutes = require('./routes/liveAlert');
+const chatRoutes = require('./routes/chat');
+const weatherRoutes = require('./routes/weather');
 
 const app = express();
 const server = http.createServer(app);
@@ -55,6 +57,8 @@ app.use('/api/cluster', verifyToken, verifyAdmin, clusterRoutes);
 app.use('/api/complaint', verifyToken, complaintRoutes);
 app.use('/api/sos', verifyToken, sosRoutes);
 app.use('/api/live-alert', liveAlertRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/weather', weatherRoutes);
 
 // Health check
 app.get('/', (_req, res) => {

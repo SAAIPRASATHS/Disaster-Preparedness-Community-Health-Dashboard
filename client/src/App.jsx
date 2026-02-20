@@ -3,6 +3,8 @@ import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ToastProvider } from './components/Toast';
 import Navbar from './components/Navbar';
+import ChatBot from './components/ChatBot';
+import ShakeHandler from './components/ShakeHandler';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
@@ -40,6 +42,8 @@ export default function App() {
                                 <Route path="/alerts" element={<Alerts />} />
                             </Routes>
                         </main>
+                        <ChatBot />
+                        <ShakeHandler />
                     </div>
                 </ToastProvider>
             </SocketProvider>
