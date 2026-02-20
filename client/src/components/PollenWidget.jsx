@@ -49,11 +49,16 @@ const PollenWidget = () => {
             <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <p className="text-xs font-semibold text-secondary uppercase tracking-widest">🌿 Pollen Index</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-xs font-semibold text-secondary uppercase tracking-widest">🌿 Pollen Index</p>
+                            {pollen.isEstimated && (
+                                <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">ESTIMATED</span>
+                            )}
+                        </div>
                         <p className="text-xs text-gray-400 mt-0.5">{pollen.name}</p>
                     </div>
                     <div
-                        className="px-3 py-1.5 rounded-full text-sm font-bold text-white"
+                        className="px-3 py-1.5 rounded-full text-sm font-bold text-white transition-colors duration-500"
                         style={{ backgroundColor: pollen.overall.color }}
                     >
                         {pollen.overall.level}
