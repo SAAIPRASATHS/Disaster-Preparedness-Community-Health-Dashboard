@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import API from '../api';
+import { useTranslation } from 'react-i18next';
 
 const AirQualityWidget = () => {
+    const { t } = useTranslation();
     const [aq, setAq] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -14,7 +16,7 @@ const AirQualityWidget = () => {
                 setAq(data);
             } catch (err) {
                 console.error('AQ error:', err);
-                setError('Failed to load air quality');
+                setError(t('airQuality.failedLoad'));
             } finally {
                 setLoading(false);
             }
@@ -23,17 +25,17 @@ const AirQualityWidget = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => fetchAQ(pos.coords.latitude, pos.coords.longitude),
-                () => { setError('Location permission denied'); setLoading(false); }
+                () => { setError(t('common.locationPermissionDenied')); setLoading(false); }
             );
         } else {
-            setError('Geolocation not supported');
+            setError(t('common.geolocationNotSupported'));
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     if (loading) return (
         <div className="bg-white p-6 rounded-2xl shadow-card animate-pulse h-44 flex items-center justify-center text-gray-400">
-            Loading air quality...
+            {t('airQuality.loadingAQ')}
         </div>
     );
     if (error) return <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm border border-red-100">{error}</div>;
@@ -51,7 +53,7 @@ const AirQualityWidget = () => {
             <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <p className="text-xs font-semibold text-secondary uppercase tracking-widest">🌫️ Air Quality</p>
+                        <p className="text-xs font-semibold text-secondary uppercase tracking-widest">{t('airQuality.title')}</p>
                         <p className="text-xs text-gray-400 mt-0.5">{aq.name}</p>
                     </div>
                     <div className="text-right">

@@ -4,17 +4,18 @@ export default {
     theme: {
         extend: {
             colors: {
-                primary: '#5C7AEA',
-                secondary: '#8E9AAF',
-                accent: '#A7C7E7',
-                warning: '#F0A500',
-                danger: '#E85D75',
-                surface: '#F4F6FB',
-                dark: '#2E2E2E',
+                primary: '#2563EB',
+                secondary: '#64748B',
+                accent: '#DBEAFE',
+                warning: '#F59E0B',
+                danger: '#EF4444',
+                emergency: '#FE7F2D',
+                surface: '#F8FAFC',
+                dark: '#0F172A',
                 risk: {
-                    high: '#E85D75',
-                    medium: '#F0A500',
-                    low: '#4CAF82',
+                    high: '#EF4444',
+                    medium: '#F59E0B',
+                    low: '#10B981',
                 },
             },
             borderRadius: {
@@ -22,9 +23,9 @@ export default {
                 '3xl': '1.5rem',
             },
             boxShadow: {
-                card: '0 4px 24px rgba(92,122,234,0.08)',
-                'card-hover': '0 8px 32px rgba(92,122,234,0.15)',
-                glow: '0 0 20px rgba(92,122,234,0.2)',
+                card: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                'card-hover': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+                glow: '0 0 15px rgba(37, 99, 235, 0.2)',
             },
         },
     },

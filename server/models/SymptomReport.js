@@ -11,6 +11,8 @@ const symptomReportSchema = new mongoose.Schema({
             message: 'At least one symptom is required',
         },
     },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    userName: { type: String, default: 'Citizen' },
     createdAt: { type: Date, default: Date.now, index: true },
 });
 

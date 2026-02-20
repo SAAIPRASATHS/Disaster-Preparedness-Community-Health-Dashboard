@@ -38,6 +38,26 @@ router.get('/', async (req, res) => {
             city = geoData.results[0].name;
         }
 
+        // Reverse Geocode if lat/lon provided but city name is missing
+        if (!city && lat && lon) {
+            try {
+                const { data: revData } = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+                    params: { lat, lon, format: 'json' },
+                    headers: { 'User-Agent': 'DisasterPreparednessApp/1.0' }
+                });
+                if (revData && revData.address) {
+                    const addr = revData.address;
+                    city = addr.suburb || addr.neighbourhood || addr.city || addr.town || addr.village || addr.county || 'Unknown Location';
+                    // Optional: Append district/city for better context
+                    const parent = addr.city || addr.state;
+                    if (parent && city !== parent) city = `${city}, ${parent}`;
+                }
+            } catch (err) {
+                console.error('Reverse Geocoding Error:', err.message);
+                // Fallback to coordinates already handled in response
+            }
+        }
+
         if (!lat || !lon) {
             return res.status(400).json({ error: 'Either city or lat/lon coordinates are required' });
         }

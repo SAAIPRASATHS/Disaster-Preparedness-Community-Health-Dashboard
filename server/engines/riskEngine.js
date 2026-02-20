@@ -13,6 +13,7 @@ const FALLBACK_WEATHER = {
     Chennai: { temp: 34, humidity: 78, windSpeed: '18.0', rainfall: 8, description: 'light rain' },
     Kolkata: { temp: 33, humidity: 80, windSpeed: '12.6', rainfall: 5, description: 'partly cloudy' },
     Bangalore: { temp: 28, humidity: 65, windSpeed: '9.7', rainfall: 2, description: 'clear sky' },
+    Coimbatore: { temp: 35, humidity: 75, windSpeed: '12.0', rainfall: 15, description: 'salubrious climate' },
     default: { temp: 30, humidity: 70, windSpeed: '12.0', rainfall: 3, description: 'partly cloudy' },
 };
 
@@ -97,6 +98,43 @@ function buildRisks(weather) {
                 'Fill bathtubs and containers with fresh water',
                 'Identify nearest cyclone shelter',
                 'Follow evacuation orders from local authorities',
+            ],
+            secondaryHealthRisks: ['Injuries', 'Waterborne diseases', 'Respiratory infections'],
+        });
+    }
+
+    // --- Drought (TN DMP: Multi-Hazard) ---
+    if (weather.humidity < 40 && weather.rainfall === 0) {
+        const score = Math.min(0.9, 0.4 + (40 - weather.humidity) / 60);
+        risks.push({
+            disasterType: 'Drought',
+            probabilityScore: parseFloat(score.toFixed(2)),
+            riskLevel: score >= 0.7 ? 'HIGH' : score >= 0.4 ? 'MEDIUM' : 'LOW',
+            confidenceScore: 0.75,
+            recommendedPreparedness: [
+                'Store water in sealed containers (min 4L/person/day)',
+                'Reduce water usage — fix all leaks immediately',
+                'Keep ORS packets and electrolytes ready',
+                'Report any dried-up wells or water bodies to authorities',
+                'Follow government water rationing guidelines',
+            ],
+            secondaryHealthRisks: ['Dehydration', 'Malnutrition', 'Heat stroke'],
+        });
+    }
+
+    // --- Tsunami (TN DMP: Coastal Hazard) ---
+    if (parseFloat(weather.windSpeed) > 90 && weather.rainfall > 30) {
+        risks.push({
+            disasterType: 'Tsunami',
+            probabilityScore: 0.35,
+            riskLevel: 'MEDIUM',
+            confidenceScore: 0.5,
+            recommendedPreparedness: [
+                'If in coastal area — move inland immediately (>3km from shore)',
+                'Do not wait for official warnings if you feel strong earthquakes near coast',
+                'Follow Tamil Nadu SDRF / NDRF coastal evacuation routes',
+                'Do not return to coast until all-clear is issued',
+                'Stay tuned to All India Radio and local TN govt announcements',
             ],
             secondaryHealthRisks: ['Injuries', 'Waterborne diseases', 'Respiratory infections'],
         });

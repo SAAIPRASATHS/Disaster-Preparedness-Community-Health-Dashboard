@@ -68,7 +68,7 @@ router.get('/', async (req, res) => {
             const getEstimate = (base, peakMonth, width = 2) => {
                 const diff = Math.min(Math.abs(month - peakMonth), 12 - Math.abs(month - peakMonth));
                 const factor = Math.max(0, 1 - (diff / width));
-                return Math.round(base * factor + (Math.random() * 5));
+                return Math.round(base * factor);
             };
 
             // Estimations based on Northern Hemisphere (India/Global North)

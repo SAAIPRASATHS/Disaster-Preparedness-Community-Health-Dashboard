@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchClusters } from '../api';
+import { fetchClusters, fetchResources } from '../api';
 import { useSocket } from '../context/SocketContext';
 import { MapContainer, TileLayer, CircleMarker, Popup, Polygon, Marker, useMap } from 'react-leaflet';
 import { PageTransition, AnimatedCard } from '../components/Motion';
 import { useToast } from '../components/Toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -32,55 +33,49 @@ function getCoords(loc) {
 
 const RISK_COLORS = { high: '#E85D75', medium: '#F0A500', low: '#4CAF82' };
 
+const RESOURCE_ICONS = {
+    fire_station: '🚒',
+    police_station: '👮',
+    hotel: '🏨',
+    food_point: '🍱',
+    hospital: '🏥',
+    government_office: '🏛️'
+};
+
+const EMERGENCY_ICONS = {
+    police: L.divIcon({
+        html: '<div style="background-color: blue; padding: 5px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);">👤</div>',
+        className: 'custom-police-marker',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+    }),
+    fire: L.divIcon({
+        html: '<div style="background-color: red; padding: 5px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);">🔥</div>',
+        className: 'custom-fire-marker',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+    })
+};
+
 // Disaster zone polygons for demo
 const DISASTER_ZONES = [
     {
         name: 'Mumbai Flood Zone — Mithi River',
         level: 'danger',
         color: '#E85D75',
-        coords: [
-            [19.11, 72.85], [19.12, 72.87], [19.09, 72.88], [19.08, 72.86], [19.09, 72.84],
-        ],
+        coords: [[19.11, 72.85], [19.12, 72.87], [19.09, 72.88], [19.08, 72.86], [19.09, 72.84]],
     },
     {
         name: 'Mumbai Coastal Storm Surge',
         level: 'danger',
         color: '#E85D75',
-        coords: [
-            [19.05, 72.80], [19.08, 72.82], [19.06, 72.84], [19.03, 72.83], [19.02, 72.81],
-        ],
+        coords: [[19.05, 72.80], [19.08, 72.82], [19.06, 72.84], [19.03, 72.83], [19.02, 72.81]],
     },
     {
         name: 'Delhi Heat Zone — Central NCR',
         level: 'danger',
         color: '#E85D75',
-        coords: [
-            [28.60, 77.18], [28.65, 77.22], [28.63, 77.26], [28.58, 77.25], [28.57, 77.20],
-        ],
-    },
-    {
-        name: 'Thane — Moderate Risk',
-        level: 'moderate',
-        color: '#F0A500',
-        coords: [
-            [19.20, 72.96], [19.24, 72.99], [19.22, 73.02], [19.18, 73.00], [19.17, 72.97],
-        ],
-    },
-    {
-        name: 'Pune — Low Risk',
-        level: 'safe',
-        color: '#4CAF82',
-        coords: [
-            [18.50, 73.83], [18.55, 73.87], [18.53, 73.90], [18.48, 73.88], [18.47, 73.85],
-        ],
-    },
-    {
-        name: 'Navi Mumbai — Moderate Risk',
-        level: 'moderate',
-        color: '#F0A500',
-        coords: [
-            [19.01, 73.00], [19.05, 73.04], [19.03, 73.07], [18.99, 73.05], [18.98, 73.02],
-        ],
+        coords: [[28.60, 77.18], [28.65, 77.22], [28.63, 77.26], [28.58, 77.25], [28.57, 77.20]],
     },
 ];
 
@@ -108,29 +103,184 @@ function FlyToUser({ position }) {
     return null;
 }
 
+// Emergency Services Layer Component
+function EmergencyServicesLayer({ active, onLoading, filters }) {
+    const map = useMap();
+    const [markers, setMarkers] = useState([]);
+    const lastFetchRef = useRef(null);
+    const toast = useToast();
+    const { t } = useTranslation();
+
+    const fetchEmergencyServices = useCallback(async () => {
+        if (!active) return;
+
+        const zoom = map.getZoom();
+        if (zoom < 11) {
+            toast.info(t('map.zoomInForServices'));
+            setMarkers([]);
+            return;
+        }
+
+        const center = map.getCenter();
+        const lat = center.lat;
+        const lng = center.lng;
+
+        // Debounce / Prevention of too many requests
+        const now = Date.now();
+        if (lastFetchRef.current && now - lastFetchRef.current < 1500) return;
+        lastFetchRef.current = now;
+
+        onLoading(true);
+        try {
+            const radius = 5000; // 5km
+            const query = `
+                [out:json][timeout:25];
+                (
+                  node["amenity"="police"](around:${radius}, ${lat}, ${lng});
+                  node["amenity"="fire_station"](around:${radius}, ${lat}, ${lng});
+                );
+                out body;
+            `;
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+            const response = await fetch(url);
+
+            if (!response.ok) throw new Error('Overpass API Error');
+
+            const data = await response.json();
+
+            const newMarkers = data.elements.map(element => ({
+                id: element.id,
+                lat: element.lat,
+                lon: element.lon,
+                type: element.tags.amenity === 'police' ? 'police' : 'fire',
+                name: element.tags.name || (element.tags.amenity === 'police' ? 'Police Station' : 'Fire Station'),
+                address: element.tags['addr:street'] || element.tags['addr:city'] || 'Nearby'
+            }));
+
+            setMarkers(newMarkers);
+
+            if (newMarkers.length === 0) {
+                toast.info(t('map.noServicesNearby'));
+            } else {
+                toast.success(t('map.foundServices', { count: newMarkers.length }));
+            }
+        } catch (error) {
+            console.error('Error fetching emergency services:', error);
+            toast.error(t('map.fetchError'));
+        } finally {
+            onLoading(false);
+        }
+    }, [map, active, onLoading, toast, t]);
+
+    useEffect(() => {
+        if (active) {
+            fetchEmergencyServices();
+        } else {
+            setMarkers([]);
+        }
+    }, [active, fetchEmergencyServices]);
+
+    // Re-fetch on map move
+    useEffect(() => {
+        const handleMoveEnd = () => {
+            if (active) fetchEmergencyServices();
+        };
+        map.on('moveend', handleMoveEnd);
+        return () => map.off('moveend', handleMoveEnd);
+    }, [map, active, fetchEmergencyServices]);
+
+    if (!active) return null;
+
+    return markers
+        .filter(m => filters[m.type])
+        .map(marker => (
+            <Marker
+                key={marker.id}
+                position={[marker.lat, marker.lon]}
+                icon={marker.type === 'police' ? EMERGENCY_ICONS.police : EMERGENCY_ICONS.fire}
+            >
+                <Popup>
+                    <div className="text-dark text-sm">
+                        <p className="font-bold border-bottom pb-1 mb-1">
+                            {marker.type === 'police' ? '👮 ' : '🚒 '}{marker.name}
+                        </p>
+                        <p className="text-xs text-secondary">{marker.address}</p>
+                        <p className="text-[10px] text-primary mt-1 font-semibold uppercase">{marker.type} service</p>
+                    </div>
+                </Popup>
+            </Marker>
+        ));
+}
+
 export default function MapView() {
+    const { t } = useTranslation();
     const [clusters, setClusters] = useState([]);
+    const [resources, setResources] = useState([]);
     const [clustersLoaded, setClustersLoaded] = useState(false);
     const [userPos, setUserPos] = useState(null);
     const [geoError, setGeoError] = useState('');
     const [dangerAlert, setDangerAlert] = useState(null);
+    const [showEmergency, setShowEmergency] = useState(false);
+    const [emergencyLoading, setEmergencyLoading] = useState(false);
+
+    // Legend Filtering
+    const [filters, setFilters] = useState({
+        dangerZone: true,
+        userLocation: true,
+        fire: true,
+        police: true,
+        hotel: true,
+        food: true,
+        hospital: true,
+        government: true,
+    });
+
+    const toggleFilter = (key) => {
+        setFilters(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
     const { socket } = useSocket();
     const toast = useToast();
     const alertShownRef = useRef(new Set());
 
+    // Default center coordinates (Mumbai) used when geolocation is unavailable
+    const DEFAULT_CENTER = [19.076, 72.8777];
+
     useEffect(() => {
         async function load() {
-            try { const { data } = await fetchClusters(); setClusters(data.clusters || []); }
-            catch { /* silent — map still renders */ }
+            try {
+                // Always fetch resources — use userPos if available, otherwise default to Mumbai
+                const fetchLat = userPos ? userPos[0] : DEFAULT_CENTER[0];
+                const fetchLon = userPos ? userPos[1] : DEFAULT_CENTER[1];
+
+                const [clusterRes, resourceRes] = await Promise.all([
+                    fetchClusters(),
+                    fetchResources(fetchLat, fetchLon, 50000) // 50km radius
+                ]);
+                setClusters(clusterRes.data.clusters || []);
+                setResources(resourceRes.data || []);
+            }
+            catch (err) { console.error('Load Map Data Error:', err); }
             finally { setClustersLoaded(true); }
         }
         load();
-    }, []);
+    }, [userPos]);
+
+
+    // Handle real-time resource updates
+    useEffect(() => {
+        if (socket) {
+            socket.on('resource-update', (updated) => {
+                setResources(prev => prev.map(r => r._id === updated._id ? updated : r));
+            });
+            return () => socket.off('resource-update');
+        }
+    }, [socket]);
 
     // Geolocation watch
     useEffect(() => {
         if (!navigator.geolocation) {
-            setGeoError('Geolocation not supported by your browser');
+            setGeoError(t('map.geoNotSupported'));
             return;
         }
 
@@ -146,7 +296,7 @@ export default function MapView() {
         );
 
         return () => navigator.geolocation.clearWatch(watchId);
-    }, []);
+    }, [t]);
 
     // Geofencing check
     const checkGeofence = useCallback(() => {
@@ -158,9 +308,8 @@ export default function MapView() {
                 if (!alertShownRef.current.has(key)) {
                     alertShownRef.current.add(key);
                     setDangerAlert(zone);
-                    toast.error(`⚠️ You are in a danger zone: ${zone.name}`);
+                    toast.error(t('map.dangerZoneAlert', { zone: zone.name }));
 
-                    // Emit to admin
                     if (socket) {
                         socket.emit('geofence-breach', {
                             zone: zone.name,
@@ -174,7 +323,7 @@ export default function MapView() {
             }
         }
         setDangerAlert(null);
-    }, [userPos, socket, toast]);
+    }, [userPos, socket, toast, t]);
 
     useEffect(() => {
         checkGeofence();
@@ -184,9 +333,9 @@ export default function MapView() {
         <PageTransition>
             <div className="text-center mb-6">
                 <h1 className="text-3xl font-extrabold text-dark mb-2">
-                    Risk <span className="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">Map</span>
+                    {t('map.title1')} <span className="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">{t('map.title2')}</span>
                 </h1>
-                <p className="text-secondary text-sm">Live geolocation, disaster zones & outbreak clusters</p>
+                <p className="text-secondary text-sm">{t('map.subtitle')}</p>
             </div>
 
             {/* Danger Zone Alert Banner */}
@@ -202,46 +351,55 @@ export default function MapView() {
                             <div className="flex items-center gap-3">
                                 <span className="text-2xl animate-pulse">🔴</span>
                                 <div>
-                                    <p className="text-sm font-bold text-risk-high">DANGER ZONE DETECTED</p>
-                                    <p className="text-xs text-risk-high/80">{dangerAlert.name} — Consider triggering SOS if in distress</p>
+                                    <p className="text-sm font-bold text-risk-high">{t('map.dangerZoneDetected')}</p>
+                                    <p className="text-xs text-risk-high/80">{dangerAlert.name} — {t('map.considerSOS')}</p>
                                 </div>
                             </div>
                             <a href="/user-dashboard" className="text-xs bg-risk-high text-white px-4 py-2 rounded-xl font-semibold hover:bg-red-600 transition">
-                                Send SOS →
+                                {t('map.sendSOS')}
                             </a>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* User coordinates */}
-            {userPos && (
-                <div className="flex justify-center mb-4">
-                    <div className="bg-white border border-gray-200 rounded-full px-5 py-2.5 shadow-card text-sm">
-                        <span className="text-secondary">📍 Your location:</span>
-                        <span className="font-semibold text-dark ml-2">{userPos[0].toFixed(5)}, {userPos[1].toFixed(5)}</span>
-                    </div>
-                </div>
-            )}
-            {geoError && (
-                <div className="text-center mb-4">
-                    <p className="text-xs text-warning">{geoError}</p>
-                </div>
-            )}
-
             {/* Legend */}
-            <div className="flex justify-center gap-6 mb-5">
+            <div className="flex flex-wrap justify-center gap-4 mb-5">
                 {[
-                    { label: 'Danger Zone', color: 'bg-risk-high' },
-                    { label: 'Moderate Risk', color: 'bg-warning' },
-                    { label: 'Safe Zone', color: 'bg-risk-low' },
-                    { label: 'Your Location', color: 'bg-primary' },
+                    { id: 'dangerZone', label: t('map.dangerZone'), color: 'bg-risk-high' },
+                    { id: 'userLocation', label: t('map.yourLocation'), color: 'bg-primary' },
+                    { id: 'fire', label: t('map.fire'), color: 'bg-red-500' },
+                    { id: 'police', label: t('map.police'), color: 'bg-blue-600' },
+                    { id: 'hotel', label: t('map.hotel'), color: 'bg-orange-400' },
+                    { id: 'food', label: t('map.food'), color: 'bg-emerald-500' },
+                    { id: 'hospital', label: t('map.hospital'), color: 'bg-teal-500' },
+                    { id: 'government', label: t('map.government'), color: 'bg-indigo-500' },
                 ].map((item) => (
-                    <div key={item.label} className="flex items-center gap-2 text-sm text-secondary">
-                        <span className={`w-3.5 h-3.5 rounded-full ${item.color}`} />
+                    <button
+                        key={item.id}
+                        onClick={() => toggleFilter(item.id)}
+                        className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border transition-all shadow-sm active:scale-95 ${filters[item.id]
+                            ? 'bg-white text-dark border-gray-200 font-semibold'
+                            : 'bg-gray-50 text-secondary border-gray-100 opacity-60 grayscale-[0.5]'
+                            }`}
+                    >
+                        <span className={`w-2.5 h-2.5 rounded-full ${item.color} ${!filters[item.id] && 'opacity-30'}`} />
                         {item.label}
-                    </div>
+                    </button>
                 ))}
+
+                {/* Emergency Services Toggle */}
+                <button
+                    onClick={() => setShowEmergency(!showEmergency)}
+                    className={`flex items-center gap-2 text-xs px-4 py-1 rounded-full border transition-all duration-300 shadow-sm ${showEmergency
+                        ? 'bg-primary text-white border-primary border-2 font-bold scale-105'
+                        : 'bg-white text-secondary border-gray-200'
+                        }`}
+                >
+                    <span>{showEmergency ? '🚨' : '🏥'}</span>
+                    {t('map.emergencyServices')}
+                    {emergencyLoading && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block ml-1"></span>}
+                </button>
             </div>
 
             <div className="rounded-2xl overflow-hidden border-2 border-gray-200 shadow-card" style={{ height: '500px' }}>
@@ -251,23 +409,83 @@ export default function MapView() {
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
-                    {/* Fly to user position */}
-                    {userPos && <FlyToUser position={userPos} />}
+                    {userPos && filters.userLocation && <FlyToUser position={userPos} />}
 
-                    {/* User marker */}
-                    {userPos && (
+                    {userPos && filters.userLocation && (
                         <Marker position={userPos}>
                             <Popup>
                                 <div className="text-dark text-sm">
-                                    <p className="font-bold text-primary">📍 Your Location</p>
+                                    <p className="font-bold text-primary">📍 {t('map.yourLocation')}</p>
                                     <p>{userPos[0].toFixed(5)}, {userPos[1].toFixed(5)}</p>
                                 </div>
                             </Popup>
                         </Marker>
                     )}
 
-                    {/* Disaster zone polygons — ALWAYS rendered */}
-                    {DISASTER_ZONES.map((zone, i) => (
+                    <EmergencyServicesLayer active={showEmergency} onLoading={setEmergencyLoading} filters={filters} />
+
+                    {/* Resources Markers */}
+                    {resources.map((res) => {
+                        const typeMap = {
+                            fire_station: 'fire',
+                            police_station: 'police',
+                            hotel: 'hotel',
+                            food_point: 'food',
+                            hospital: 'hospital',
+                            government_office: 'government'
+                        };
+                        const filterKey = typeMap[res.type];
+                        if (filterKey && !filters[filterKey]) return null;
+
+                        let icon = L.divIcon({
+                            html: `<div style="font-size: 24px;">${RESOURCE_ICONS[res.type] || '📍'}</div>`,
+                            className: 'custom-resource-marker',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        });
+
+                        if (res.type === 'police_station') icon = EMERGENCY_ICONS.police;
+                        if (res.type === 'fire_station') icon = EMERGENCY_ICONS.fire;
+                        if (res.type === 'hospital') {
+                            icon = L.divIcon({
+                                html: '<div style="background-color: #10B981; padding: 5px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);">🏥</div>',
+                                className: 'custom-hospital-marker',
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 15]
+                            });
+                        }
+                        if (res.type === 'government_office') {
+                            icon = L.divIcon({
+                                html: '<div style="background-color: #6366F1; padding: 5px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);">🏛️</div>',
+                                className: 'custom-government-marker',
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 15]
+                            });
+                        }
+
+                        return (
+                            <Marker
+                                key={res._id}
+                                position={[res.location.coordinates[1], res.location.coordinates[0]]}
+                                icon={icon}
+                            >
+                                <Popup>
+                                    <div className="text-dark text-sm">
+                                        <p className="font-bold border-bottom pb-1 mb-1">{res.name}</p>
+                                        <p className="text-xs text-secondary mb-1">{res.address}</p>
+                                        {res.type === 'food_point' && (
+                                            <div className={`text-xs font-bold px-2 py-1 rounded-lg inline-block ${res.status.foodAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                {t('common.foodAvailable')}: {res.status.foodAvailable ? `YES ✅` : `NO ❌`}
+                                            </div>
+                                        )}
+                                        {res.contact && <p className="text-[10px] mt-1 text-primary">📞 {res.contact}</p>}
+                                    </div>
+                                </Popup>
+                            </Marker>
+                        );
+                    })}
+
+                    {filters.dangerZone && DISASTER_ZONES.map((zone, i) => (
                         <Polygon
                             key={i}
                             positions={zone.coords}
@@ -275,70 +493,19 @@ export default function MapView() {
                                 color: zone.color,
                                 fillColor: zone.color,
                                 fillOpacity: 0.25,
-                                weight: 2.5,
-                                dashArray: zone.level === 'danger' ? '' : '5,5',
+                                weight: 2.5
                             }}
                         >
                             <Popup>
                                 <div className="text-dark text-sm">
                                     <p className="font-bold">{zone.name}</p>
-                                    <p>Level: <span className="font-semibold" style={{ color: zone.color }}>{zone.level.toUpperCase()}</span></p>
+                                    <p>{t('map.level')}: <span className="font-semibold" style={{ color: zone.color }}>{zone.level.toUpperCase()}</span></p>
                                 </div>
                             </Popup>
                         </Polygon>
                     ))}
-
-                    {/* Cluster markers — optional overlay */}
-                    {clusters.map((cluster, i) => {
-                        const coords = getCoords(cluster.area);
-                        const level = cluster.confidence >= 0.7 ? 'high' : cluster.confidence >= 0.4 ? 'medium' : 'low';
-                        return (
-                            <CircleMarker key={i} center={coords}
-                                radius={Math.max(12, cluster.totalReports * 2)}
-                                fillColor={RISK_COLORS[level]} fillOpacity={0.45}
-                                color={RISK_COLORS[level]} weight={2.5}>
-                                <Popup>
-                                    <div className="text-dark text-sm">
-                                        <p className="font-bold">{cluster.area}</p>
-                                        <p>{cluster.predictedDiseaseType}</p>
-                                        <p>Confidence: {(cluster.confidence * 100).toFixed(0)}%</p>
-                                        <p>Reports: {cluster.totalReports}</p>
-                                    </div>
-                                </Popup>
-                            </CircleMarker>
-                        );
-                    })}
                 </MapContainer>
             </div>
-
-            {/* Cluster list — shown only if clusters exist */}
-            {clusters.length > 0 && (
-                <div className="mt-6 space-y-3">
-                    <h3 className="text-lg font-bold text-dark mb-2">Active Outbreak Clusters</h3>
-                    {clusters.map((cluster, i) => {
-                        const level = cluster.confidence >= 0.7 ? 'high' : cluster.confidence >= 0.4 ? 'medium' : 'low';
-                        const border = level === 'high' ? 'border-risk-high/20' : level === 'medium' ? 'border-warning/20' : 'border-risk-low/20';
-                        return (
-                            <AnimatedCard key={i} delay={i * 0.05}
-                                className={`bg-white border-2 ${border} rounded-2xl px-5 py-4 flex items-center justify-between shadow-card`}>
-                                <div>
-                                    <span className="font-semibold text-dark">{cluster.area}</span>
-                                    <span className="text-sm text-secondary ml-2">— {cluster.predictedDiseaseType}</span>
-                                </div>
-                                <span className="text-sm text-secondary font-medium">{cluster.totalReports} reports</span>
-                            </AnimatedCard>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Subtle info when no clusters — map still fully visible above */}
-            {clusters.length === 0 && clustersLoaded && (
-                <div className="mt-4 bg-emerald-50 border border-risk-low/20 rounded-2xl px-5 py-3 flex items-center gap-3">
-                    <span className="text-lg">✅</span>
-                    <p className="text-sm text-emerald-700">No outbreak clusters detected — all zones shown on the map above</p>
-                </div>
-            )}
         </PageTransition>
     );
 }

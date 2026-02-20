@@ -93,10 +93,15 @@ async function detectClusters() {
         }
     }
 
+    const totalGlobalReports = await SymptomReport.countDocuments({
+        createdAt: { $gte: twelveHoursAgo }
+    });
+
     return {
         analysedAt: new Date().toISOString(),
         windowHours: 12,
         clustersDetected: clusters.length,
+        totalGlobalReports,
         clusters,
     };
 }

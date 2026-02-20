@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import API from '../api';
+import { useTranslation } from 'react-i18next';
 
 const WeatherWidget = () => {
+    const { t, i18n } = useTranslation();
     const [weather, setWeather] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -14,7 +16,7 @@ const WeatherWidget = () => {
                 setWeather(data);
             } catch (err) {
                 console.error('Weather error:', err);
-                setError('Failed to load weather');
+                setError(t('weather.failedLoad'));
             } finally {
                 setLoading(false);
             }
@@ -23,17 +25,17 @@ const WeatherWidget = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-                () => { setError('Location permission denied'); setLoading(false); }
+                () => { setError(t('common.locationPermissionDenied')); setLoading(false); }
             );
         } else {
-            setError('Geolocation not supported');
+            setError(t('common.geolocationNotSupported'));
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     if (loading) return (
         <div className="bg-gradient-to-br from-blue-500 to-blue-700 p-6 rounded-2xl shadow-lg animate-pulse h-44 flex items-center justify-center text-white/60">
-            Loading weather...
+            {t('weather.loadingWeather')}
         </div>
     );
     if (error) return <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm border border-red-100">{error}</div>;
@@ -56,10 +58,10 @@ const WeatherWidget = () => {
                         <p className="text-blue-100 mt-1 text-sm font-medium">{current.icon} {current.description}</p>
                     </div>
                     <div className="text-right space-y-1 text-xs text-blue-200">
-                        <p>Feels like <span className="text-white font-bold">{Math.round(current.feelsLike)}°C</span></p>
-                        <p>Humidity <span className="text-white font-bold">{current.humidity}%</span></p>
-                        <p>Wind <span className="text-white font-bold">{current.windSpeed} km/h</span></p>
-                        {current.rain > 0 && <p>Rain <span className="text-white font-bold">{current.rain} mm</span></p>}
+                        <p>{t('weather.feelsLike')} <span className="text-white font-bold">{Math.round(current.feelsLike)}°C</span></p>
+                        <p>{t('weather.humidity')} <span className="text-white font-bold">{current.humidity}%</span></p>
+                        <p>{t('weather.wind')} <span className="text-white font-bold">{current.windSpeed} km/h</span></p>
+                        {current.rain > 0 && <p>{t('weather.rain')} <span className="text-white font-bold">{current.rain} mm</span></p>}
                     </div>
                 </div>
                 <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 blur-2xl" />
@@ -68,12 +70,12 @@ const WeatherWidget = () => {
             {/* 7-Day Forecast */}
             {forecast && forecast.length > 0 && (
                 <div className="bg-black/10 backdrop-blur-sm px-6 py-4 border-t border-white/10">
-                    <p className="text-[10px] text-blue-200 font-semibold uppercase tracking-widest mb-3">7-Day Forecast</p>
+                    <p className="text-[10px] text-blue-200 font-semibold uppercase tracking-widest mb-3">{t('weather.forecast')}</p>
                     <div className="grid grid-cols-7 gap-1 text-center">
                         {forecast.map((day, i) => (
                             <div key={i} className="group">
                                 <p className="text-[10px] text-blue-300 font-medium">
-                                    {new Date(day.date).toLocaleDateString('en', { weekday: 'short' })}
+                                    {new Date(day.date).toLocaleDateString(i18n.language || 'en', { weekday: 'short' })}
                                 </p>
                                 <p className="text-lg my-0.5">{day.icon}</p>
                                 <p className="text-xs font-bold">{Math.round(day.tempMax)}°</p>

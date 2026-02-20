@@ -7,8 +7,10 @@ import AirQualityWidget from '../components/AirQualityWidget';
 import PollenWidget from '../components/PollenWidget';
 import { PageTransition, AnimatedCard, CardSkeleton } from '../components/Motion';
 import { useToast } from '../components/Toast';
+import { useTranslation } from 'react-i18next';
 
 export default function Home() {
+    const { t } = useTranslation();
     const [city, setCity] = useState('');
     const [riskData, setRiskData] = useState(null);
     const [checklist, setChecklist] = useState(null);
@@ -36,8 +38,8 @@ export default function Home() {
         try {
             const { data } = await fetchRisk(city);
             setRiskData(data);
-            if (data.isFallback) toast.warning('Using estimated data — weather API unavailable');
-            else toast.success(`Risk assessed for ${data.city}`);
+            if (data.isFallback) toast.warning(t('home.usingEstimated'));
+            else toast.success(t('home.riskAssessedFor', { city: data.city }));
 
             const topRisk = data.risks.reduce((a, b) =>
                 a.probabilityScore >= b.probabilityScore ? a : b
@@ -56,7 +58,7 @@ export default function Home() {
                 // Checklist is optional
             }
         } catch (err) {
-            const msg = err.response?.data?.error || 'Failed to fetch risk data. Please try again.';
+            const msg = err.response?.data?.error || t('home.failedFetch');
             setError(msg);
             toast.error(msg);
         } finally {
@@ -67,12 +69,12 @@ export default function Home() {
     return (
         <PageTransition>
             {/* Hero */}
-            <div className="text-center mb-10">
-                <h1 className="text-4xl md:text-5xl font-extrabold text-dark mb-3">
-                    Disaster Risk <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">Assessment</span>
+            <div className="text-center mb-12">
+                <h1 className="text-5xl md:text-6xl font-black text-slate-900 mb-4 tracking-tight leading-tight">
+                    {t('home.title1')} <span className="bg-gradient-to-r from-primary via-blue-500 to-indigo-600 bg-clip-text text-transparent">{t('home.title2')}</span>
                 </h1>
-                <p className="text-secondary max-w-xl mx-auto text-sm md:text-base">
-                    Enter your city for real-time disaster risk analysis with personalized preparedness recommendations.
+                <p className="text-slate-500 max-w-2xl mx-auto text-base md:text-lg font-medium leading-relaxed">
+                    {t('home.subtitle')}
                 </p>
             </div>
 
@@ -92,7 +94,7 @@ export default function Home() {
                         type="text"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
-                        placeholder="Enter city name (e.g. Mumbai, Chennai, Delhi)"
+                        placeholder={t('home.placeholder')}
                         className="flex-1 bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition shadow-card"
                     />
                     <button
@@ -104,9 +106,9 @@ export default function Home() {
                         {loading ? (
                             <span className="flex items-center gap-2">
                                 <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                                Checking…
+                                {t('home.checking')}
                             </span>
-                        ) : 'Check Risk'}
+                        ) : t('home.checkRisk')}
                     </button>
                 </div>
             </form>
@@ -114,13 +116,13 @@ export default function Home() {
             {/* Family Profile */}
             <AnimatedCard className="max-w-2xl mx-auto mb-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-card">
                 <h3 className="text-sm font-semibold text-secondary mb-3 uppercase tracking-wider">
-                    Family Profile
+                    {t('home.familyProfile')}
                 </h3>
                 <div className="grid grid-cols-3 gap-4 mb-4">
                     {[
-                        { label: 'Family Members', value: familyMembers, set: setFamilyMembers, min: 1 },
-                        { label: 'Elderly (60+)', value: elderly, set: setElderly, min: 0 },
-                        { label: 'Children (<12)', value: children, set: setChildren, min: 0 },
+                        { label: t('home.familyMembers'), value: familyMembers, set: setFamilyMembers, min: 1 },
+                        { label: t('home.elderly'), value: elderly, set: setElderly, min: 0 },
+                        { label: t('home.children'), value: children, set: setChildren, min: 0 },
                     ].map((field) => (
                         <div key={field.label}>
                             <label className="text-xs text-secondary block mb-1.5">{field.label}</label>
@@ -135,7 +137,7 @@ export default function Home() {
                     ))}
                 </div>
                 <div>
-                    <label className="text-xs text-secondary block mb-2">Conditions</label>
+                    <label className="text-xs text-secondary block mb-2">{t('home.conditions')}</label>
                     <div className="flex flex-wrap gap-2">
                         {conditionOptions.map((c) => (
                             <button
@@ -181,7 +183,7 @@ export default function Home() {
                         </span>
                         {riskData.isFallback && (
                             <span className="text-xs text-warning bg-warning/10 px-3 py-1.5 rounded-full font-medium">
-                                ⚠ Estimated data
+                                ⚠ {t('home.estimatedData')}
                             </span>
                         )}
                     </div>
@@ -189,10 +191,10 @@ export default function Home() {
                     {/* Risk Timeline */}
                     {riskData.riskTimeline && (
                         <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card mb-5">
-                            <h3 className="text-sm font-semibold text-secondary mb-3 uppercase tracking-wider">📈 Risk Timeline</h3>
+                            <h3 className="text-sm font-semibold text-secondary mb-3 uppercase tracking-wider">{t('home.riskTimeline')}</h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <p className="text-xs text-secondary mb-2 font-medium">Next 24 Hours</p>
+                                    <p className="text-xs text-secondary mb-2 font-medium">{t('home.next24Hours')}</p>
                                     {riskData.riskTimeline.next24h.map((r, i) => (
                                         <div key={i} className="flex items-center justify-between text-sm py-1">
                                             <span className="text-dark">{r.disasterType}</span>
@@ -206,7 +208,7 @@ export default function Home() {
                                     ))}
                                 </div>
                                 <div>
-                                    <p className="text-xs text-secondary mb-2 font-medium">Next 48 Hours</p>
+                                    <p className="text-xs text-secondary mb-2 font-medium">{t('home.next48Hours')}</p>
                                     {riskData.riskTimeline.next48h.map((r, i) => (
                                         <div key={i} className="flex items-center justify-between text-sm py-1">
                                             <span className="text-dark">{r.disasterType}</span>
@@ -239,8 +241,8 @@ export default function Home() {
             {!riskData && !loading && !error && (
                 <div className="text-center py-12 text-secondary">
                     <p className="text-5xl mb-4">🌍</p>
-                    <p className="text-lg font-medium">Enter a city above to begin</p>
-                    <p className="text-sm mt-1">Get real-time weather-based disaster risk assessment</p>
+                    <p className="text-lg font-medium">{t('home.enterCity')}</p>
+                    <p className="text-sm mt-1">{t('home.getRealTime')}</p>
                 </div>
             )}
         </PageTransition>

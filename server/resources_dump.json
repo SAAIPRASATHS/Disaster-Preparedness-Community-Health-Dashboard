@@ -1,0 +1,102 @@
+[
+  {
+    "_id": "699801db0ed410335d8a90af",
+    "name": "Mumbai Fire Station - Andheri",
+    "type": "fire_station",
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        72.8444,
+        19.1136
+      ]
+    },
+    "address": "S.V. Road, Andheri West, Mumbai",
+    "contact": "022-26233516",
+    "status": {
+      "foodAvailable": true,
+      "lastUpdated": "2026-02-20T06:40:27.055Z"
+    },
+    "createdAt": "2026-02-20T06:40:27.055Z",
+    "__v": 0
+  },
+  {
+    "_id": "699801db0ed410335d8a90b0",
+    "name": "Police Station - Bandra",
+    "type": "police_station",
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        72.8333,
+        19.0544
+      ]
+    },
+    "address": "Hill Road, Bandra West, Mumbai",
+    "contact": "022-26425126",
+    "status": {
+      "foodAvailable": true,
+      "lastUpdated": "2026-02-20T06:40:27.056Z"
+    },
+    "createdAt": "2026-02-20T06:40:27.056Z",
+    "__v": 0
+  },
+  {
+    "_id": "699801db0ed410335d8a90b1",
+    "name": "Emergency Shelter - Taj Hotel",
+    "type": "hotel",
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        72.8333,
+        18.9213
+      ]
+    },
+    "address": "Apollo Bunder, Colaba, Mumbai",
+    "contact": "022-66653366",
+    "status": {
+      "foodAvailable": true,
+      "lastUpdated": "2026-02-20T06:40:27.057Z"
+    },
+    "createdAt": "2026-02-20T06:40:27.057Z",
+    "__v": 0
+  },
+  {
+    "_id": "699801db0ed410335d8a90b2",
+    "name": "Community Kitchen - Dadar",
+    "type": "food_point",
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        72.8444,
+        19.0178
+      ]
+    },
+    "address": "Dadar East Market area, Mumbai",
+    "contact": "9876543210",
+    "status": {
+      "foodAvailable": true,
+      "lastUpdated": "2026-02-20T06:40:27.057Z"
+    },
+    "createdAt": "2026-02-20T06:40:27.057Z",
+    "__v": 0
+  },
+  {
+    "_id": "699801db0ed410335d8a90b3",
+    "name": "Food Relief Center - Borivali",
+    "type": "food_point",
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        72.8567,
+        19.23
+      ]
+    },
+    "address": "Link Road, Borivali West, Mumbai",
+    "contact": "9988776655",
+    "status": {
+      "foodAvailable": false,
+      "lastUpdated": "2026-02-20T06:40:27.057Z"
+    },
+    "createdAt": "2026-02-20T06:40:27.057Z",
+    "__v": 0
+  }
+]

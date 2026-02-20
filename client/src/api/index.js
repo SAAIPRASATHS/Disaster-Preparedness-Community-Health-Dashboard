@@ -4,11 +4,19 @@ const API = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
-// Attach JWT token to every request if available
+// Attach JWT token to every request — pick admin or citizen token based on current path
 API.interceptors.request.use((config) => {
-    const token = localStorage.getItem('dp_token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    const isAdminPath = window.location.pathname.startsWith('/admin');
+    const token = isAdminPath
+        ? localStorage.getItem('dp_admin_token')
+        : localStorage.getItem('dp_citizen_token');
+    // Fallback: try the other token if primary is missing
+    const fallbackToken = isAdminPath
+        ? localStorage.getItem('dp_citizen_token')
+        : localStorage.getItem('dp_admin_token');
+    const finalToken = token || fallbackToken || localStorage.getItem('dp_token');
+    if (finalToken) {
+        config.headers.Authorization = `Bearer ${finalToken}`;
     }
     return config;
 });
@@ -22,6 +30,7 @@ export const adminLogin = (data) => API.post('/auth/admin-login', data);
 export const fetchRisk = (city) => API.get(`/risk?city=${encodeURIComponent(city)}`);
 export const fetchChecklist = (data) => API.post('/preparedness', data);
 export const submitReport = (data) => API.post('/report', data);
+export const fetchReports = () => API.get('/report');
 export const fetchClusters = () => API.get('/cluster');
 
 // SOS API
@@ -37,8 +46,6 @@ export const resolveComplaint = (id) => API.put(`/complaint/${id}/resolve`);
 
 // Live Alerts API
 export const fetchLiveAlerts = () => API.get('/live-alert');
-
-// Chat API (Groq)
 export const sendChatMessage = (messages) => API.post('/chat', { messages });
 
 // Weather API (Open-Meteo — no key needed)
@@ -52,5 +59,18 @@ export const fetchAirQualityByCity = (city) => API.get(`/airquality?city=${encod
 // Pollen API (Open-Meteo — no key needed)
 export const fetchPollen = (lat, lon) => API.get(`/pollen?lat=${lat}&lon=${lon}`);
 export const fetchPollenByCity = (city) => API.get(`/pollen?city=${encodeURIComponent(city)}`);
+
+// Resources API
+export const fetchResources = (lat, lon, radius) => {
+    const params = [];
+    if (lat != null && lon != null) {
+        params.push(`lat=${lat}`, `lon=${lon}`);
+        if (radius) params.push(`radius=${radius}`);
+    }
+    return API.get(`/resources${params.length ? '?' + params.join('&') : ''}`);
+};
+export const updateResourceStatus = (id, data) => API.patch(`/resources/${id}`, data);
+export const addResource = (data) => API.post('/resources', data);
+
 
 export default API;

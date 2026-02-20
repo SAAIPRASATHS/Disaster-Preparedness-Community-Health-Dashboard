@@ -1,21 +1,24 @@
+import { useTranslation } from 'react-i18next';
+
 export default function ChecklistCard({ checklist }) {
+    const { t } = useTranslation();
     if (!checklist) return null;
 
     return (
         <div className="bg-white border border-gray-200 rounded-2xl p-6 mt-6 shadow-card">
             <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-bold text-dark">
-                    📋 Preparedness — {checklist.disasterType}
+                    {t('checklist.preparedness')} — {checklist.disasterType}
                 </h3>
-                <span className="text-sm text-secondary bg-surface px-3 py-1 rounded-full">{checklist.totalItems} items</span>
+                <span className="text-sm text-secondary bg-surface px-3 py-1 rounded-full">{t('checklist.items', { count: checklist.totalItems })}</span>
             </div>
 
             {/* Family profile */}
             <div className="flex flex-wrap gap-2 mb-5">
                 {[
-                    { label: 'Family', value: checklist.familyProfile.familyMembers },
-                    { label: 'Elderly', value: checklist.familyProfile.elderly },
-                    { label: 'Children', value: checklist.familyProfile.children },
+                    { label: t('checklist.family'), value: checklist.familyProfile.familyMembers },
+                    { label: t('checklist.elderly'), value: checklist.familyProfile.elderly },
+                    { label: t('checklist.children'), value: checklist.familyProfile.children },
                 ].map((item) => (
                     <span key={item.label} className="bg-primary/10 text-primary text-xs px-3 py-1 rounded-full font-semibold">
                         {item.label}: {item.value}
@@ -42,7 +45,7 @@ export default function ChecklistCard({ checklist }) {
             {checklist.aiEnhancedTips?.length > 0 && (
                 <div className="mt-6 border-t border-gray-100 pt-5">
                     <h4 className="text-sm font-semibold text-primary mb-3 flex items-center gap-2">
-                        🤖 AI Recommendations
+                        {t('checklist.aiRecommendations')}
                         <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Groq</span>
                     </h4>
                     <ul className="space-y-2">

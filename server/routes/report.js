@@ -15,7 +15,21 @@ router.post('/', async (req, res) => {
         const report = await SymptomReport.create({
             location: location.trim().toLowerCase(),
             symptoms,
+            userId: req.user.id,
+            userName: req.user.name || 'Citizen',
         });
+
+        // WebSocket broadcast
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('new-report', {
+                id: report._id,
+                location: report.location,
+                symptoms: report.symptoms,
+                userName: report.userName,
+                createdAt: report.createdAt
+            });
+        }
 
         res.status(201).json({
             message: 'Symptom report submitted successfully',
@@ -27,6 +41,16 @@ router.post('/', async (req, res) => {
         }
         console.error('Report submission error:', err.message);
         res.status(500).json({ error: 'Failed to submit report' });
+    }
+});
+
+// GET /api/report — list reports (admin)
+router.get('/', async (req, res) => {
+    try {
+        const reports = await SymptomReport.find().sort({ createdAt: -1 }).limit(50);
+        res.json(reports);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch reports' });
     }
 });
 

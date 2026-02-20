@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import API from '../api';
+import { useTranslation } from 'react-i18next';
 
 const PollenWidget = () => {
+    const { t } = useTranslation();
     const [pollen, setPollen] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -14,7 +16,7 @@ const PollenWidget = () => {
                 setPollen(data);
             } catch (err) {
                 console.error('Pollen error:', err);
-                setError('Failed to load pollen data');
+                setError(t('pollen.failedLoad'));
             } finally {
                 setLoading(false);
             }
@@ -23,17 +25,17 @@ const PollenWidget = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => fetchPollen(pos.coords.latitude, pos.coords.longitude),
-                () => { setError('Location permission denied'); setLoading(false); }
+                () => { setError(t('common.locationPermissionDenied')); setLoading(false); }
             );
         } else {
-            setError('Geolocation not supported');
+            setError(t('common.geolocationNotSupported'));
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     if (loading) return (
         <div className="bg-white p-6 rounded-2xl shadow-card animate-pulse h-44 flex items-center justify-center text-gray-400">
-            Loading pollen data...
+            {t('pollen.loadingPollen')}
         </div>
     );
     if (error) return <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm border border-red-100">{error}</div>;
@@ -50,9 +52,9 @@ const PollenWidget = () => {
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <div className="flex items-center gap-2">
-                            <p className="text-xs font-semibold text-secondary uppercase tracking-widest">🌿 Pollen Index</p>
+                            <p className="text-xs font-semibold text-secondary uppercase tracking-widest">{t('pollen.title')}</p>
                             {pollen.isEstimated && (
-                                <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">ESTIMATED</span>
+                                <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">{t('pollen.estimated')}</span>
                             )}
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">{pollen.name}</p>

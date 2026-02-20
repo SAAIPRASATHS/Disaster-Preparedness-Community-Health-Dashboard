@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Navbar() {
     const { user, isAuthenticated, isAdmin, logout } = useAuth();
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const { t } = useTranslation();
 
     const handleLogout = () => {
         logout();
@@ -15,12 +18,12 @@ export default function Navbar() {
     };
 
     const links = [
-        { to: '/home', label: 'Risk Check', show: true },
-        { to: '/user-dashboard', label: 'My Dashboard', show: isAuthenticated && !isAdmin },
-        { to: '/admin-dashboard', label: 'Admin Panel', show: isAdmin },
-        { to: '/report', label: 'Report', show: isAuthenticated },
-        { to: '/map', label: 'Map', show: true },
-        { to: '/alerts', label: 'Alerts', show: true },
+        { to: '/home', label: t('nav.riskCheck'), show: true },
+        { to: '/user-dashboard', label: t('nav.myDashboard'), show: isAuthenticated && !isAdmin },
+        { to: '/admin-dashboard', label: t('nav.adminPanel'), show: isAdmin },
+        { to: '/report', label: t('nav.report'), show: isAuthenticated },
+        { to: '/map', label: t('nav.map'), show: true },
+        { to: '/alerts', label: t('nav.alerts'), show: true },
     ].filter((l) => l.show);
 
     const linkClass = ({ isActive }) =>
@@ -35,8 +38,8 @@ export default function Navbar() {
                 {/* Logo */}
                 <NavLink to="/" className="flex items-center gap-2.5 group">
                     <span className="text-2xl group-hover:scale-110 transition-transform">🛡️</span>
-                    <span className="font-extrabold text-lg bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
-                        DisasterPrep
+                    <span className="font-black text-xl bg-gradient-to-r from-primary via-blue-500 to-emerald-400 bg-clip-text text-transparent tracking-tight">
+                        {t('nav.brand')}
                     </span>
                 </NavLink>
 
@@ -49,29 +52,31 @@ export default function Navbar() {
                     ))}
                 </div>
 
-                {/* Auth Section */}
-                <div className="hidden md:flex items-center gap-2">
+                {/* Auth Section + Language Switcher */}
+                <div className="hidden md:flex items-center gap-3">
+                    <LanguageSwitcher />
+                    <div className="h-6 w-px bg-gray-200 mx-1" />
                     {isAuthenticated ? (
                         <>
-                            <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${isAdmin ? 'bg-primary/15 text-primary' : 'bg-emerald-100 text-emerald-700'
+                            <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${isAdmin ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                                 }`}>
-                                {isAdmin ? '🔑 Admin' : '👤 Citizen'}
+                                {isAdmin ? `🔑 ${t('common.admin')}` : `👤 ${t('common.citizen')}`}
                             </span>
-                            <span className="text-sm text-secondary">{user?.name}</span>
+                            <span className="text-sm font-semibold text-slate-700">{user?.name}</span>
                             <button
                                 onClick={handleLogout}
-                                className="text-sm text-secondary hover:text-danger px-3 py-1.5 rounded-xl hover:bg-red-50 transition-colors font-medium"
+                                className="text-sm text-slate-500 hover:text-danger px-3 py-1.5 rounded-xl hover:bg-danger/5 transition-colors font-medium"
                             >
-                                Logout
+                                {t('common.logout')}
                             </button>
                         </>
                     ) : (
                         <>
-                            <NavLink to="/citizen-login" className="text-sm text-secondary hover:text-primary px-3 py-1.5 rounded-xl hover:bg-primary/10 transition-colors font-medium">
-                                Login
+                            <NavLink to="/citizen-login" className="text-sm text-slate-600 hover:text-primary px-4 py-2 rounded-xl hover:bg-primary/5 transition-colors font-semibold">
+                                {t('common.login')}
                             </NavLink>
-                            <NavLink to="/register" className="text-sm bg-primary text-white px-5 py-2 rounded-xl hover:bg-primary/90 transition-all font-semibold shadow-sm hover:shadow-md">
-                                Register
+                            <NavLink to="/register" className="text-sm bg-primary text-white px-6 py-2.5 rounded-xl hover:bg-primary/90 transition-all font-bold shadow-md shadow-primary/20 hover:shadow-lg active:scale-95">
+                                {t('common.register')}
                             </NavLink>
                         </>
                     )}
@@ -103,15 +108,16 @@ export default function Navbar() {
                                     {link.label}
                                 </NavLink>
                             ))}
+                            <div className="py-2"><LanguageSwitcher /></div>
                             <hr className="my-2 border-gray-100" />
                             {isAuthenticated ? (
                                 <button onClick={handleLogout} className="w-full text-left text-sm text-danger px-3 py-2 rounded-xl hover:bg-red-50 font-medium">
-                                    Logout ({user?.name})
+                                    {t('common.logout')} ({user?.name})
                                 </button>
                             ) : (
                                 <div className="flex gap-2">
-                                    <NavLink to="/citizen-login" onClick={() => setMobileOpen(false)} className="flex-1 text-center text-sm text-primary px-3 py-2 rounded-xl border border-primary/20 font-medium">Login</NavLink>
-                                    <NavLink to="/register" onClick={() => setMobileOpen(false)} className="flex-1 text-center text-sm bg-primary text-white px-3 py-2 rounded-xl font-semibold">Register</NavLink>
+                                    <NavLink to="/citizen-login" onClick={() => setMobileOpen(false)} className="flex-1 text-center text-sm text-primary px-3 py-2 rounded-xl border border-primary/20 font-medium">{t('common.login')}</NavLink>
+                                    <NavLink to="/register" onClick={() => setMobileOpen(false)} className="flex-1 text-center text-sm bg-primary text-white px-3 py-2 rounded-xl font-semibold">{t('common.register')}</NavLink>
                                 </div>
                             )}
                         </div>

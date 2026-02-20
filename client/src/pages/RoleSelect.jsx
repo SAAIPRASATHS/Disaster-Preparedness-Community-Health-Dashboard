@@ -2,10 +2,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function RoleSelect() {
     const { isAuthenticated, isAdmin } = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -17,8 +19,8 @@ export default function RoleSelect() {
         {
             key: 'citizen',
             icon: '👤',
-            title: 'Continue as Citizen',
-            subtitle: 'Report symptoms, view risk maps, and receive alerts',
+            title: t('roleSelect.citizenTitle'),
+            subtitle: t('roleSelect.citizenSubtitle'),
             gradient: 'from-emerald-500 to-teal-400',
             hoverGlow: 'hover:shadow-[0_8px_40px_rgba(76,175,130,0.3)]',
             path: '/citizen-login',
@@ -26,8 +28,8 @@ export default function RoleSelect() {
         {
             key: 'admin',
             icon: '🔑',
-            title: 'Continue as Admin',
-            subtitle: 'Monitor outbreaks, manage alerts, and coordinate response',
+            title: t('roleSelect.adminTitle'),
+            subtitle: t('roleSelect.adminSubtitle'),
             gradient: 'from-primary to-blue-400',
             hoverGlow: 'hover:shadow-[0_8px_40px_rgba(92,122,234,0.3)]',
             path: '/admin-login',
@@ -44,10 +46,10 @@ export default function RoleSelect() {
             >
                 <span className="text-6xl block mb-4">🛡️</span>
                 <h1 className="text-4xl md:text-5xl font-extrabold text-dark mb-3">
-                    Disaster <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">Preparedness</span>
+                    {t('roleSelect.title1')} <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">{t('roleSelect.title2')}</span>
                 </h1>
                 <p className="text-secondary text-base md:text-lg max-w-lg mx-auto">
-                    Community Health Dashboard — Real-time disaster monitoring & proactive alerts
+                    {t('roleSelect.subtitle')}
                 </p>
             </motion.div>
 
@@ -67,7 +69,7 @@ export default function RoleSelect() {
                         <h2 className="text-xl font-bold text-dark mb-2">{role.title}</h2>
                         <p className="text-sm text-secondary leading-relaxed">{role.subtitle}</p>
                         <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                            Get started <span className="text-lg">→</span>
+                            {t('roleSelect.getStarted')} <span className="text-lg">→</span>
                         </div>
                     </motion.button>
                 ))}
@@ -79,7 +81,7 @@ export default function RoleSelect() {
                 transition={{ delay: 0.8 }}
                 className="mt-10 text-xs text-secondary/60"
             >
-                Powered by AI-driven risk analysis & real-time monitoring
+                {t('roleSelect.poweredBy')}
             </motion.p>
         </div>
     );

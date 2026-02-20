@@ -4,6 +4,7 @@ import { registerUser } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { PageTransition, AnimatedCard } from '../components/Motion';
 import { useToast } from '../components/Toast';
+import { useTranslation } from 'react-i18next';
 
 export default function Register() {
     const [form, setForm] = useState({ name: '', email: '', password: '', familyMembers: 4, elderly: 0, children: 0, conditions: [] });
@@ -12,6 +13,7 @@ export default function Register() {
     const { login } = useAuth();
     const navigate = useNavigate();
     const toast = useToast();
+    const { t } = useTranslation();
 
     const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
     const setNum = (key) => (e) => {
@@ -30,10 +32,10 @@ export default function Register() {
         try {
             const { data } = await registerUser(form);
             login(data.token, data.user);
-            toast.success('Account created successfully!');
+            toast.success(t('register.accountCreated'));
             navigate('/user-dashboard');
         } catch (err) {
-            const msg = err.response?.data?.error || 'Registration failed';
+            const msg = err.response?.data?.error || t('register.registrationFailed');
             setError(msg);
             toast.error(msg);
         } finally {
@@ -45,44 +47,44 @@ export default function Register() {
         <PageTransition>
             <div className="max-w-lg mx-auto mt-4">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-extrabold text-dark mb-2">Create Account</h1>
-                    <p className="text-secondary text-sm">Join your community's disaster preparedness network</p>
+                    <h1 className="text-3xl font-extrabold text-dark mb-2">{t('register.createAccount')}</h1>
+                    <p className="text-secondary text-sm">{t('register.joinCommunity')}</p>
                 </div>
                 <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-7 shadow-card">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="col-span-2">
-                                <label className="block text-sm font-semibold text-dark mb-1.5">Full Name</label>
+                                <label className="block text-sm font-semibold text-dark mb-1.5">{t('register.fullName')}</label>
                                 <input type="text" value={form.name} onChange={set('name')} required
                                     className="w-full bg-surface border border-gray-200 rounded-xl px-4 py-3 text-dark focus:outline-none focus:ring-2 focus:ring-primary/40" />
                             </div>
                             <div className="col-span-2">
-                                <label className="block text-sm font-semibold text-dark mb-1.5">Email</label>
+                                <label className="block text-sm font-semibold text-dark mb-1.5">{t('common.email')}</label>
                                 <input type="email" value={form.email} onChange={set('email')} required
                                     className="w-full bg-surface border border-gray-200 rounded-xl px-4 py-3 text-dark focus:outline-none focus:ring-2 focus:ring-primary/40" />
                             </div>
                             <div className="col-span-2">
-                                <label className="block text-sm font-semibold text-dark mb-1.5">Password</label>
+                                <label className="block text-sm font-semibold text-dark mb-1.5">{t('common.password')}</label>
                                 <input type="password" value={form.password} onChange={set('password')} required minLength={6}
-                                    className="w-full bg-surface border border-gray-200 rounded-xl px-4 py-3 text-dark focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="Min 6 characters" />
+                                    className="w-full bg-surface border border-gray-200 rounded-xl px-4 py-3 text-dark focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder={t('register.minChars')} />
                             </div>
                         </div>
 
                         <hr className="border-gray-100" />
-                        <p className="text-xs text-secondary font-semibold uppercase tracking-wider">Family Profile</p>
+                        <p className="text-xs text-secondary font-semibold uppercase tracking-wider">{t('register.familyProfile')}</p>
                         <div className="grid grid-cols-3 gap-3">
                             <div>
-                                <label className="text-xs text-secondary block mb-1">Family</label>
+                                <label className="text-xs text-secondary block mb-1">{t('register.family')}</label>
                                 <input type="number" min={1} value={form.familyMembers} onChange={setNum('familyMembers')}
                                     className="w-full bg-surface border border-gray-200 rounded-lg px-3 py-2 text-sm text-dark focus:outline-none focus:ring-1 focus:ring-primary/30" />
                             </div>
                             <div>
-                                <label className="text-xs text-secondary block mb-1">Elderly</label>
+                                <label className="text-xs text-secondary block mb-1">{t('register.elderly')}</label>
                                 <input type="number" min={0} value={form.elderly} onChange={setNum('elderly')}
                                     className="w-full bg-surface border border-gray-200 rounded-lg px-3 py-2 text-sm text-dark focus:outline-none focus:ring-1 focus:ring-primary/30" />
                             </div>
                             <div>
-                                <label className="text-xs text-secondary block mb-1">Children</label>
+                                <label className="text-xs text-secondary block mb-1">{t('register.children')}</label>
                                 <input type="number" min={0} value={form.children} onChange={setNum('children')}
                                     className="w-full bg-surface border border-gray-200 rounded-lg px-3 py-2 text-sm text-dark focus:outline-none focus:ring-1 focus:ring-primary/30" />
                             </div>
@@ -100,12 +102,12 @@ export default function Register() {
                         {error && <p className="text-sm text-danger font-medium">{error}</p>}
                         <button type="submit" disabled={loading}
                             className="w-full bg-primary hover:bg-primary/90 disabled:bg-gray-300 text-white font-semibold py-3.5 rounded-2xl transition-all shadow-card hover:shadow-card-hover active:scale-[0.98]">
-                            {loading ? 'Creating account…' : 'Create Account'}
+                            {loading ? t('register.creatingAccount') : t('register.createAccount')}
                         </button>
                     </form>
                     <div className="mt-5 text-center text-sm text-secondary">
-                        Already have an account?{' '}
-                        <a href="/login" className="text-primary font-semibold hover:underline">Sign In</a>
+                        {t('register.alreadyHaveAccount')}{' '}
+                        <a href="/login" className="text-primary font-semibold hover:underline">{t('login.signIn')}</a>
                     </div>
                 </AnimatedCard>
             </div>

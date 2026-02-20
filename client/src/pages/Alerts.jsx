@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PageTransition, AnimatedCard } from '../components/Motion';
 import { useToast } from '../components/Toast';
+import { useTranslation } from 'react-i18next';
 
 const DISASTER_ALERTS = [
     { type: 'Flood Warning', severity: 'HIGH', location: 'Mumbai, Maharashtra', time: '2 hours ago', desc: 'Heavy rainfall expected. Water levels rising in Mithi river.' },
@@ -22,6 +23,7 @@ const SEVERITY = {
 };
 
 export default function Alerts() {
+    const { t } = useTranslation();
     const [tab, setTab] = useState('disaster');
     const [filter, setFilter] = useState('all');
     const toast = useToast();
@@ -33,16 +35,16 @@ export default function Alerts() {
         <PageTransition>
             <div className="text-center mb-8">
                 <h1 className="text-3xl font-extrabold text-dark mb-2">
-                    <span className="bg-gradient-to-r from-warning to-red-400 bg-clip-text text-transparent">Alerts</span> Center
+                    <span className="bg-gradient-to-r from-warning to-red-400 bg-clip-text text-transparent">{t('alerts.title1')}</span> {t('alerts.title2')}
                 </h1>
-                <p className="text-secondary text-sm">Stay informed about disasters and health alerts in your region</p>
+                <p className="text-secondary text-sm">{t('alerts.subtitle')}</p>
             </div>
 
             {/* Tabs */}
             <div className="flex justify-center gap-2 mb-6">
                 {[
-                    { key: 'disaster', label: '🌊 Disaster Alerts' },
-                    { key: 'health', label: '🏥 Health Alerts' },
+                    { key: 'disaster', label: t('alerts.disasterAlerts') },
+                    { key: 'health', label: t('alerts.healthAlerts') },
                 ].map((t) => (
                     <button key={t.key} onClick={() => { setTab(t.key); setFilter('all'); }}
                         className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === t.key
@@ -58,7 +60,7 @@ export default function Alerts() {
                     <button key={f} onClick={() => setFilter(f)}
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${filter === f
                             ? 'bg-dark text-white border-dark' : 'bg-white text-secondary border-gray-200 hover:border-gray-300'}`}>
-                        {f === 'all' ? 'All' : f}
+                        {f === 'all' ? t('common.all') : f}
                     </button>
                 ))}
             </div>
@@ -67,7 +69,7 @@ export default function Alerts() {
             {filtered.length === 0 ? (
                 <div className="bg-white rounded-2xl p-10 text-center text-secondary shadow-card">
                     <p className="text-4xl mb-3">🔕</p>
-                    <p className="font-medium">No alerts in this category</p>
+                    <p className="font-medium">{t('alerts.noAlerts')}</p>
                 </div>
             ) : (
                 <div className="max-w-3xl mx-auto space-y-4">

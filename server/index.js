@@ -19,6 +19,7 @@ const chatRoutes = require('./routes/chat');
 const weatherRoutes = require('./routes/weather');
 const airqualityRoutes = require('./routes/airquality');
 const pollenRoutes = require('./routes/pollen');
+const resourceRoutes = require('./routes/resources');
 
 const app = express();
 const server = http.createServer(app);
@@ -63,6 +64,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/airquality', airqualityRoutes);
 app.use('/api/pollen', pollenRoutes);
+app.use('/api/resources', resourceRoutes);
+
 
 // Health check
 app.get('/', (_req, res) => {

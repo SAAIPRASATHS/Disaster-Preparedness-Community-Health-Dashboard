@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProtectedRoute({ children }) {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, isAdmin, loading } = useAuth();
 
     if (loading) {
         return (
@@ -14,6 +14,11 @@ export default function ProtectedRoute({ children }) {
 
     if (!isAuthenticated) {
         return <Navigate to="/citizen-login" replace />;
+    }
+
+    // If an admin tries to access citizen-only pages, redirect to admin dashboard
+    if (isAdmin) {
+        return <Navigate to="/admin-dashboard" replace />;
     }
 
     return children;
