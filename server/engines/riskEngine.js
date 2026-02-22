@@ -176,21 +176,49 @@ async function geocodeCity(city) {
  * Fetch weather from Open-Meteo (free, no API key) and convert to disaster risk assessment.
  * Falls back to mock data if the request fails.
  */
-async function assessRisk(city) {
+async function assessRisk(city, lat, lon) {
     let weather;
     let cityName = city;
     let country = 'IN';
     let isFallback = false;
 
     try {
-        const geo = await geocodeCity(city);
-        cityName = geo.name;
-        country = geo.country_code || 'IN';
+        let finalLat = lat;
+        let finalLon = lon;
+
+        if (city && (!finalLat || !finalLon)) {
+            const geo = await geocodeCity(city);
+            cityName = geo.name;
+            country = geo.country_code || 'IN';
+            finalLat = geo.latitude;
+            finalLon = geo.longitude;
+        } else if (finalLat && finalLon && !cityName) {
+            // Reverse Geocode if coordinates provided but city name missing
+            try {
+                const { data: revData } = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+                    params: { lat: finalLat, lon: finalLon, format: 'json' },
+                    headers: { 'User-Agent': 'DisasterPreparednessApp/1.0' }
+                });
+                if (revData && revData.address) {
+                    const addr = revData.address;
+                    cityName = addr.suburb || addr.neighbourhood || addr.city || addr.town || addr.village || addr.county || 'Unknown Location';
+                    const parent = addr.city || addr.state;
+                    if (parent && cityName !== parent) cityName = `${cityName}, ${parent}`;
+                }
+            } catch (err) {
+                console.error('Risk Reverse Geocoding Error:', err.message);
+                cityName = `${parseFloat(finalLat).toFixed(3)}, ${parseFloat(finalLon).toFixed(3)}`;
+            }
+        }
+
+        if (!finalLat || !finalLon) {
+            throw new Error('Coordinates missing');
+        }
 
         const { data } = await axios.get('https://api.open-meteo.com/v1/forecast', {
             params: {
-                latitude: geo.latitude,
-                longitude: geo.longitude,
+                latitude: finalLat,
+                longitude: finalLon,
                 current: 'temperature_2m,relative_humidity_2m,wind_speed_10m,rain,weather_code',
                 timezone: 'auto',
             },
@@ -200,13 +228,13 @@ async function assessRisk(city) {
         weather = {
             temp: c.temperature_2m,
             humidity: c.relative_humidity_2m,
-            windSpeed: c.wind_speed_10m.toFixed(1),
+            windSpeed: parseFloat(c.wind_speed_10m).toFixed(1),
             rainfall: c.rain || 0,
             description: WMO_DESCRIPTIONS[c.weather_code] || 'Unknown',
         };
     } catch (err) {
-        console.warn(`⚠️  Open-Meteo fallback for "${city}":`, err.message);
-        weather = getFallbackWeather(city);
+        console.warn(`⚠️ Risk fallback for location:`, err.message);
+        weather = getFallbackWeather(city || 'default');
         isFallback = true;
     }
 

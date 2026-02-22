@@ -92,9 +92,13 @@ router.post('/', async (req, res) => {
 
         const lastMsg = messages[messages.length - 1]?.content || '';
 
-        // ── Step 1: Ask the AI to extract intent + city ──
+        // Clean messages: Groq only accepts 'role' and 'content'
+        const cleanMessages = messages.map(m => ({
+            role: m.role,
+            content: m.content
+        }));
         const extractRes = await axios.post(GROQ_API_URL, {
-            model: 'llama-3.3-70b-versatile',
+            model: 'llama-3.1-8b-instant',
             messages: [
                 {
                     role: 'system',
@@ -102,7 +106,7 @@ router.post('/', async (req, res) => {
 - "needs_weather": boolean (true if user asks about weather, rain, temperature, forecast, climate, storm, humidity, wind)
 - "needs_airquality": boolean (true if user asks about air quality, pollution, AQI, PM2.5, smog)
 - "needs_resources": boolean (true if user asks about nearby services like fire stations, police stations, hospitals, hotels, food, shelters, rescue teams, emergency services, or anything "near me")
-- "resource_type": string or null (one of: "fire_station", "police_station", "hotel", "food_point", or null if not asking about resources. If user asks about multiple or all, use "all")
+- "resource_type": string or null (one of: "fire_station", "police_station", "hotel", "food_point", "hospital", "government_office", "rescue_center", or null if not asking about resources. If user asks about multiple or all, use "all")
 - "cities": string[] (list of city names mentioned; if user says "my area" or "here" or "my surrounding", use empty array)
 - "is_comparison": boolean (true if user is comparing multiple cities or asking about max/min across locations)
 Output ONLY valid JSON, no markdown, no explanation.`,
@@ -209,35 +213,21 @@ Output ONLY valid JSON, no markdown, no explanation.`,
         let systemPrompt = `You are an expert disaster preparedness, weather, and environmental health assistant.
 
 CRITICAL RULES:
-1. DATA USAGE: You have access to REAL-TIME data provided below. Use ONLY the exact numbers from this data.
-2. NO HALLUCINATIONS: NEVER invent, estimate, or guess any data values (temperatures, AQI, resource names, addresses, contacts).
-3. MISSING DATA: If no real-time data is provided for a location, clearly state: "I don't have current environmental data for [Location Name] right now."
-4. RESOURCE PRESENTATION: When presenting "NEARBY RESOURCES", use specific markdown formatting:
-   - Use **Bold** for names.
-   - Use Bullet points for details.
-   - Include the "Contact" if available.
-   - For food points, mention "Food Available: Yes/No".
-5. LOCATION CONTEXT: If you are using data from a fallback location (like Mumbai) because the user's location wasn't provided, briefly mention it: "Currently showing results for Mumbai as your location isn't shared."
-6. FORMATTING: Use emojis and bold text for readability. Respond in a helpful, professional tone.
-7. MULTILINGUAL SUPPORT: 
-   - DETECT the user's language from their message (English, Hindi, or Tamil).
-   - RESPOND in the SAME language as the user's message.
-   - If the user explicitly asks to change language or the context says "preferredLanguage", respect it.
-   - When searching for resources, translate the intent (e.g., if user asks "अस्पताल", assume intent is "hospital").
-8. COIMBATORE LOCAL KNOWLEDGE (Apply when context is Coimbatore):
-   - HISTORICAL: Settled since the 2nd century AD by Karikalan, first of the early Cholas.
-   - INDUSTRIAL: Known as the "Manchester of South India" and the textile capital of South India.
-   - GEOGRAPHY: Surrounded by Western Ghats, Noyyal river forms the southern boundary, features 8 major tanks (Singanallur, Valankulam, etc.).
-   - CLIMATE: Salubrious climate most of the year, aided by the Palakkad Gap breeze.
-9. CURRENT SEASONAL CONTEXT: It is currently ${season}. Tailor your disaster preparedness advice accordingly.
-10. OFFICIAL TAMIL NADU EMERGENCY HELPLINES (from TN Disaster Management Plan — cite these when relevant):
-   - 🆘 State Disaster Response Force (SDRF): 1077
-   - 🌊 Flood Helpline: 1800-425-1077 (toll-free)
-   - 🚑 Ambulance: 108
-   - 🚒 Fire: 101
-   - 👮 Police: 100
-   - 🏥 Tamil Nadu Health Helpline: 104
-   - 🌀 Cyclone / Weather: IMD Chennai — 044-28262221`;
+1. DATA USAGE: You have access to REAL-TIME data provided below. Use ONLY information from this data.
+2. NO HYBRIDS/HALLUCINATION: If the user asks for "hospital", ONLY talk about hospitals found in the data. NEVER mix categories (e.g., don't mention a police station's location if a hospital was requested).
+3. LIST ALL RESOURCES: You MUST list ALL relevant entries from the provided JSON. Do NOT summarize or skip any.
+4. RESOURCE PRESENTATION:
+   - **Pure Translation**: Translate the Name and all details. No English in parentheses.
+   - Use labels: முகவரி (Address), தொடர்பு (Contact), வகை (Type).
+   - If no contact is provided, say "தொடர்பு எண் இல்லை" (No contact number).
+   - ALL explanatory text must be 100% in the target language.
+5. NO PARENTHESES: Use the target language script only. "Prema Hospital" -> "பிரேமா மருத்துவமனை". Never "Prema Hospital (பிரேமா மருத்துவமனை)".
+6. MULTILINGUAL SUPPORT (LETHAL ENFORCEMENT): 
+   - No mixed-language labels. Constant target language.
+   - Professional, clear, and extremely fast response tone.
+7. COIMBATORE/TN CONTEXT: ...
+9. CURRENT SEASONAL CONTEXT: It is currently ${season}.
+10. TAMIL NADU EMERGENCY HELPLINES: Cite SDRF (1077), Flood (1800-425-1077), Ambulance (108), etc. when relevant.`;
 
 
         if (Object.keys(envData).length > 0) {
@@ -259,10 +249,10 @@ CRITICAL RULES:
         }
 
         const response = await axios.post(GROQ_API_URL, {
-            model: 'llama-3.3-70b-versatile',
+            model: 'llama-3.1-8b-instant',
             messages: [
                 { role: 'system', content: systemPrompt },
-                ...messages,
+                ...cleanMessages,
             ],
         }, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -286,7 +276,7 @@ router.post('/translate', async (req, res) => {
         }
 
         const response = await axios.post(GROQ_API_URL, {
-            model: 'llama-3.3-70b-versatile',
+            model: 'llama-3.1-8b-instant',
             messages: [
                 {
                     role: 'system',

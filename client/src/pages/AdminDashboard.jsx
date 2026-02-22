@@ -1,23 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense, memo, useMemo } from 'react';
 import { fetchClusters, fetchRisk, fetchSOSAlerts, fetchComplaints, fetchLiveAlerts, fetchResources, updateResourceStatus, resolveSOSAlert, resolveComplaint, fetchReports } from '../api';
 import { useSocket } from '../context/SocketContext';
-import { PageTransition, AnimatedCard, CardSkeleton } from '../components/Motion';
+import { PageTransition, CardSkeleton } from '../components/Motion';
 import { useToast } from '../components/Toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    ArcElement,
-    Title,
-    Tooltip,
-    Legend,
-} from 'chart.js';
-import { Bar, Doughnut } from 'react-chartjs-2';
+import ResourceForm from '../components/ResourceForm';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
+// Lazy load heavy components — Chart.js (~200KB) and ResourceMap (Leaflet ~155KB)
+const LazyResourceMap = lazy(() => import('../components/ResourceMap'));
+const LazyCharts = lazy(() => import('../components/AdminCharts'));
 
 const CONFIDENCE_STYLES = {
     high: { bg: 'bg-red-50', border: 'border-risk-high/20', text: 'text-risk-high', badge: 'bg-risk-high text-white' },
@@ -29,16 +21,35 @@ const RESOURCE_ICONS = {
     fire_station: '🚒',
     police_station: '👮',
     hotel: '🏨',
-    food_point: '🍱'
+    food_point: '🍱',
+    rescue_center: '🆘'
 };
 
 function getLevel(c) { return c >= 0.7 ? 'high' : c >= 0.4 ? 'medium' : 'low'; }
+
+// Lightweight card — pure CSS transitions, no framer-motion overhead
+const Card = memo(({ children, className = '', delay = 0 }) => (
+    <div
+        className={`transition-shadow duration-200 hover:shadow-lg ${className}`}
+        style={{ animationDelay: `${delay}s` }}
+    >
+        {children}
+    </div>
+));
+
+// Lightweight section loader
+const SectionLoader = () => (
+    <div className="flex items-center justify-center py-12">
+        <div className="animate-spin h-6 w-6 border-2 border-primary/30 border-t-primary rounded-full" />
+    </div>
+);
 
 export default function AdminDashboard() {
     const { t } = useTranslation();
     const [clusters, setClusters] = useState(null);
     const [riskData, setRiskData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(null);
     const { socket } = useSocket();
     const toast = useToast();
 
@@ -56,9 +67,12 @@ export default function AdminDashboard() {
         setNotifications((prev) => [entry, ...prev].slice(0, 30));
     }, []);
 
-    // Load initial data
+    // Load initial data with error recovery
     useEffect(() => {
+        const safetyTimer = setTimeout(() => { setLoading(false); }, 8000);
+
         async function load() {
+            const errors = [];
             try {
                 const [clusterRes, riskRes, sosRes, compRes, alertRes, resourceRes, reportRes] = await Promise.allSettled([
                     fetchClusters(),
@@ -70,16 +84,33 @@ export default function AdminDashboard() {
                     fetchReports()
                 ]);
                 if (clusterRes.status === 'fulfilled') setClusters(clusterRes.value.data);
+                else errors.push('Clusters');
                 if (riskRes.status === 'fulfilled') setRiskData(riskRes.value.data);
+                else errors.push('Risk');
                 if (sosRes.status === 'fulfilled') setSosAlerts(sosRes.value.data || []);
+                else errors.push('SOS');
                 if (compRes.status === 'fulfilled') setComplaints(compRes.value.data || []);
+                else errors.push('Complaints');
                 if (alertRes.status === 'fulfilled') setLiveAlerts(alertRes.value.data || []);
+                else errors.push('Alerts');
                 if (resourceRes.status === 'fulfilled') setResources(resourceRes.value.data || []);
+                else errors.push('Resources');
                 if (reportRes.status === 'fulfilled') setSymptomReports(reportRes.value.data || []);
-            } catch (err) { console.error(err); }
-            finally { setLoading(false); }
+                else errors.push('Reports');
+
+                if (errors.length > 0) {
+                    setLoadError(`Some data failed to load: ${errors.join(', ')}`);
+                }
+            } catch (err) {
+                console.error('Admin Dashboard load error:', err);
+                setLoadError('Failed to load dashboard data. Please refresh.');
+            } finally {
+                setLoading(false);
+                clearTimeout(safetyTimer);
+            }
         }
         load();
+        return () => clearTimeout(safetyTimer);
     }, []);
 
     // WebSocket listeners
@@ -163,7 +194,7 @@ export default function AdminDashboard() {
         };
     }, [socket, addNotification, toast]);
 
-    const handleResolveSOS = async (id) => {
+    const handleResolveSOS = useCallback(async (id) => {
         try {
             await resolveSOSAlert(id);
             setSosAlerts((prev) => prev.map((a) => (a._id || a.id) === id ? { ...a, resolved: true } : a));
@@ -171,9 +202,13 @@ export default function AdminDashboard() {
         } catch {
             toast.error(t('adminDashboard.sosResolveFailed'));
         }
-    };
+    }, [toast, t]);
 
-    const handleResolveComplaint = async (id) => {
+    const handleResourceAdded = useCallback((newResource) => {
+        setResources(prev => [newResource, ...prev]);
+    }, []);
+
+    const handleResolveComplaint = useCallback(async (id) => {
         try {
             await resolveComplaint(id);
             setComplaints((prev) => prev.map((c) => (c._id || c.id) === id ? { ...c, status: 'resolved' } : c));
@@ -181,9 +216,9 @@ export default function AdminDashboard() {
         } catch {
             toast.error(t('adminDashboard.complaintResolveFailed'));
         }
-    };
+    }, [toast, t]);
 
-    const handleToggleFood = async (id, foodAvailable) => {
+    const handleToggleFood = useCallback(async (id, foodAvailable) => {
         try {
             const { data } = await updateResourceStatus(id, { foodAvailable });
             setResources(prev => prev.map(r => r._id === id ? data : r));
@@ -191,38 +226,20 @@ export default function AdminDashboard() {
         } catch {
             toast.error('Failed to update food status');
         }
-    };
+    }, [toast, t]);
 
-    const barData = clusters?.clusters?.length ? {
-        labels: clusters.clusters.map((c) => c.area),
-        datasets: [{
-            label: 'Reports',
-            data: clusters.clusters.map((c) => c.totalReports),
-            backgroundColor: 'rgba(92,122,234,0.6)',
-            borderColor: '#5C7AEA',
-            borderWidth: 1,
-            borderRadius: 8,
-        }],
-    } : null;
+    // Memoize computed values
+    const activeSOS = useMemo(() => sosAlerts.filter((a) => !a.resolved).length, [sosAlerts]);
+    const pendingComplaints = useMemo(() => complaints.filter((c) => c.status === 'pending').length, [complaints]);
+    const resolvedComplaints = useMemo(() => complaints.filter((c) => c.status === 'resolved').length, [complaints]);
 
-    const doughnutData = clusters?.clusters?.length ? {
-        labels: clusters.clusters.map((c) => c.predictedDiseaseType),
-        datasets: [{
-            data: clusters.clusters.map((c) => c.confidence * 100),
-            backgroundColor: ['#E85D75', '#F0A500', '#5C7AEA', '#4CAF82', '#8E9AAF', '#A7C7E7'],
-            borderWidth: 0,
-        }],
-    } : null;
-
-    const chartOpts = {
-        responsive: true,
-        plugins: { legend: { labels: { color: '#2E2E2E', font: { family: 'Inter' } } } },
-        scales: { x: { ticks: { color: '#8E9AAF' }, grid: { color: '#eef0f6' } }, y: { ticks: { color: '#8E9AAF' }, grid: { color: '#eef0f6' } } },
-    };
-
-    const activeSOS = sosAlerts.filter((a) => !a.resolved).length;
-    const pendingComplaints = complaints.filter((c) => c.status === 'pending').length;
-    const resolvedComplaints = complaints.filter((c) => c.status === 'resolved').length;
+    const stats = useMemo(() => [
+        { value: clusters?.clustersDetected || 0, label: t('adminDashboard.activeAlerts'), color: 'text-rose-600', icon: '🚨', bg: 'bg-rose-50' },
+        { value: activeSOS, label: t('adminDashboard.activeSOS'), color: 'text-amber-600', icon: '🆘', bg: 'bg-amber-50' },
+        { value: pendingComplaints, label: t('adminDashboard.pendingComplaints'), color: 'text-indigo-600', icon: '📝', bg: 'bg-indigo-50' },
+        { value: riskData?.risks?.[0]?.riskLevel || 'N/A', label: t('adminDashboard.weatherRisk'), color: 'text-primary', icon: '🌦️', bg: 'bg-blue-50' },
+        { value: clusters?.totalGlobalReports || 0, label: t('adminDashboard.totalReports'), color: 'text-emerald-600', icon: '📊', bg: 'bg-emerald-50' },
+    ], [clusters, activeSOS, pendingComplaints, riskData, t]);
 
     if (loading) {
         return (
@@ -242,322 +259,467 @@ export default function AdminDashboard() {
 
     return (
         <PageTransition>
-            <div className="text-center mb-8">
-                <h1 className="text-3xl font-extrabold text-dark mb-2">
-                    {t('adminDashboard.title1')} <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">{t('adminDashboard.title2')}</span>
-                </h1>
-                <p className="text-secondary text-sm">{t('adminDashboard.subtitle')}</p>
-            </div>
-
-            {/* Critical Area Escalation Banner */}
-            <AnimatePresence>
-                {criticalAreas.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="mb-6"
-                    >
-                        {criticalAreas.map((area, i) => (
-                            <div key={i} className="bg-red-100 border-2 border-risk-high/30 rounded-2xl px-5 py-3 mb-2 flex items-center gap-3 alert-banner">
-                                <span className="text-2xl animate-pulse">🚨</span>
-                                <div>
-                                    <p className="text-sm font-bold text-risk-high">{t('adminDashboard.criticalEscalation')} — {area.area}</p>
-                                    <p className="text-xs text-risk-high/80">{area.message}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </motion.div>
+            <div className="min-h-screen relative overflow-hidden px-4 py-8">
+                {/* Error Banner */}
+                {loadError && (
+                    <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3">
+                        <span className="text-xl">⚠️</span>
+                        <div className="flex-1">
+                            <p className="text-sm font-bold text-amber-800">{loadError}</p>
+                            <p className="text-xs text-amber-600 mt-1">Dashboard is showing available data. Some sections may be empty.</p>
+                        </div>
+                        <button onClick={() => setLoadError(null)} className="text-amber-400 hover:text-amber-600 text-lg">✕</button>
+                    </div>
                 )}
-            </AnimatePresence>
 
-            {/* Stats row */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                {[
-                    { value: clusters?.clustersDetected || 0, label: t('adminDashboard.activeAlerts'), color: 'text-risk-high', icon: '🚨' },
-                    { value: activeSOS, label: t('adminDashboard.activeSOS'), color: 'text-danger', icon: '🆘' },
-                    { value: pendingComplaints, label: t('adminDashboard.pendingComplaints'), color: 'text-warning', icon: '📝' },
-                    { value: riskData?.risks?.[0]?.riskLevel || 'N/A', label: t('adminDashboard.weatherRisk'), color: 'text-primary', icon: '🌦️' },
-                    { value: clusters?.totalGlobalReports || 0, label: t('adminDashboard.totalReports'), color: 'text-risk-low', icon: '📊' },
-                ].map((stat, i) => (
-                    <AnimatedCard key={i} delay={i * 0.05} className="bg-white border border-gray-200 rounded-2xl p-5 text-center shadow-card">
-                        <span className="text-2xl">{stat.icon}</span>
-                        <p className={`text-3xl font-extrabold ${stat.color} mt-2`}>{stat.value}</p>
-                        <p className="text-xs text-secondary mt-1 font-medium">{stat.label}</p>
-                    </AnimatedCard>
-                ))}
-            </div>
+                {/* Background Accent Glows — smaller and lighter for performance */}
+                <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/5 rounded-full blur-[80px] -z-10" />
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-[80px] -z-10" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {/* Notification Panel */}
-                <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card max-h-80 overflow-hidden">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider">{t('adminDashboard.liveNotifications')}</h3>
-                        {notifications.length > 0 && (
-                            <span className="notification-badge">{notifications.length}</span>
-                        )}
+                <div className="text-center mb-12 relative z-10">
+                    <div className="inline-block p-4 bg-white rounded-3xl shadow-xl shadow-slate-200/50 mb-8 border border-slate-100">
+                        <span className="text-4xl block">🛡️</span>
                     </div>
-                    <div className="space-y-2 overflow-y-auto max-h-56 pr-1">
-                        <AnimatePresence>
-                            {notifications.length === 0 ? (
-                                <p className="text-sm text-secondary text-center py-4">{t('adminDashboard.noNotifications')}</p>
-                            ) : notifications.slice(0, 15).map((n) => (
-                                <motion.div
-                                    key={n.id}
-                                    initial={{ opacity: 0, x: 30 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className={`text-xs p-2.5 rounded-xl border ${n.severity === 'CRITICAL' ? 'bg-red-50 border-risk-high/20'
-                                        : n.severity === 'HIGH' ? 'bg-amber-50 border-warning/20'
-                                            : 'bg-blue-50 border-primary/15'}`}
-                                >
-                                    <span className="font-semibold">{n.type?.toUpperCase()}:</span> {n.message}
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
-                    </div>
-                </AnimatedCard>
-
-                {/* Live SOS Alerts */}
-                <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card max-h-80 overflow-hidden">
-                    <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider mb-3">{t('adminDashboard.sosAlerts')}</h3>
-                    <div className="space-y-2 overflow-y-auto max-h-56 pr-1">
-                        {sosAlerts.length === 0 ? (
-                            <p className="text-sm text-secondary text-center py-4">{t('adminDashboard.noSOS')}</p>
-                        ) : sosAlerts.slice(0, 10).map((sos, i) => (
-                            <div key={sos._id || i} className={`text-sm p-3 rounded-xl border-2 flex items-center justify-between ${sos.resolved ? 'bg-emerald-50 border-risk-low/20' : 'bg-red-50 border-risk-high/20'}`}>
-                                <div>
-                                    <p className="font-semibold text-dark">{sos.userName || 'Unknown'}</p>
-                                    <p className="text-xs text-secondary">{sos.message || 'SOS'} · {sos.location?.address || `${sos.location?.lat?.toFixed(3)}, ${sos.location?.lng?.toFixed(3)}`}</p>
-                                </div>
-                                {!sos.resolved ? (
-                                    <button
-                                        onClick={() => handleResolveSOS(sos._id || sos.id)}
-                                        className="text-xs bg-risk-high text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition font-semibold"
-                                    >
-                                        {t('common.resolve')}
-                                    </button>
-                                ) : (
-                                    <span className="text-xs text-risk-low font-semibold">✓ {t('common.resolved')}</span>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </AnimatedCard>
-            </div>
-
-            {/* Resource Management */}
-            <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card mb-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider">{t('adminDashboard.resourceManagement')}</h3>
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
-                            {t('adminDashboard.totalNearbyResources', { count: resources.length })}
-                        </span>
+                    <h1 className="text-4xl font-black text-slate-900 mb-3 tracking-tighter uppercase">
+                        {t('adminDashboard.title1')} <span className="bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent">{t('adminDashboard.title2')}</span>
+                    </h1>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">{t('adminDashboard.subtitle')}</p>
+                    <div className="flex items-center justify-center gap-4 mt-6">
+                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-100">
+                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">System Online</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-50 border border-slate-100">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Syncing</span>
+                        </div>
                     </div>
                 </div>
-                <div className="space-y-2 overflow-y-auto max-h-72 pr-1">
-                    {resources.length === 0 ? (
-                        <p className="text-sm text-secondary text-center py-4">{t('adminDashboard.noResources')}</p>
-                    ) : resources.map((res) => (
-                        <div key={res._id} className="text-sm p-4 rounded-xl border-2 bg-white border-gray-100">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-2xl">{RESOURCE_ICONS[res.type] || '📍'}</span>
-                                    <div>
-                                        <p className="font-bold text-dark">{res.name}</p>
-                                        <p className="text-xs text-secondary">{res.address}</p>
+
+                {/* Critical Area Escalation Banner */}
+                <AnimatePresence>
+                    {criticalAreas.length > 0 && (
+                        <div className="mb-10 space-y-3">
+                            {criticalAreas.map((area, i) => (
+                                <div key={i} className="bg-rose-600 px-6 py-4 rounded-3xl flex items-center gap-4 shadow-xl shadow-rose-600/20 overflow-hidden relative">
+                                    <span className="text-3xl animate-bounce">🚨</span>
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-black text-rose-200 uppercase tracking-[0.2em] mb-0.5">{t('adminDashboard.criticalEscalation')}</p>
+                                        <p className="text-sm font-black text-white uppercase tracking-tight">{area.area}: {area.message}</p>
                                     </div>
+                                    <div className="w-2 h-2 bg-white rounded-full animate-ping" />
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    {res.type === 'food_point' && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-medium">{t('common.foodAvailable')}:</span>
-                                            <button
-                                                onClick={() => handleToggleFood(res._id, !res.status.foodAvailable)}
-                                                className={`px-3 py-1 rounded-lg text-xs font-bold transition ${res.status.foodAvailable
-                                                    ? 'bg-emerald-500 text-white'
-                                                    : 'bg-red-500 text-white'}`}
-                                            >
-                                                {res.status.foodAvailable ? `YES ✅` : `NO ❌`}
-                                            </button>
+                            ))}
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* Stats row — pure CSS, no framer-motion */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-12">
+                    {stats.map((stat, i) => (
+                        <Card key={i} className="glass-card p-6 flex flex-col items-center text-center shadow-lg hover:scale-[1.02] transition-transform">
+                            <div className={`w-12 h-12 ${stat.bg} rounded-2xl flex items-center justify-center text-2xl mb-4 shadow-inner ring-4 ring-white`}>
+                                {stat.icon}
+                            </div>
+                            <p className={`text-3xl font-black ${stat.color} mb-1 tracking-tighter`}>{stat.value}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                        </Card>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {/* Notification Panel */}
+                    <Card className="glass-card p-8 h-96 overflow-hidden flex flex-col">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <span className="p-2 bg-slate-900 rounded-xl text-white text-xs">🔔</span>
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">{t('adminDashboard.liveNotifications')}</h3>
+                            </div>
+                            {notifications.length > 0 && (
+                                <span className="px-2.5 py-1 rounded-full bg-primary text-white text-[9px] font-black tracking-widest animate-pulse">{notifications.length} NEW</span>
+                            )}
+                        </div>
+                        <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide">
+                            {notifications.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-3 grayscale opacity-40">
+                                    <span className="text-4xl">📬</span>
+                                    <p className="text-[9px] font-black uppercase tracking-widest">{t('adminDashboard.noNotifications')}</p>
+                                </div>
+                            ) : notifications.slice(0, 10).map((n) => (
+                                <div
+                                    key={n.id}
+                                    className={`p-4 rounded-2xl border transition-colors ${n.severity === 'CRITICAL' ? 'bg-rose-50/50 border-rose-100 text-rose-700'
+                                        : n.severity === 'HIGH' ? 'bg-amber-50/50 border-amber-100 text-amber-700'
+                                            : 'bg-blue-50/50 border-indigo-100 text-indigo-700'}`}
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[9px] font-black uppercase tracking-widest">{n.type}</span>
+                                        <span className="text-[8px] font-bold opacity-50">{new Date(n.time).toLocaleTimeString()}</span>
+                                    </div>
+                                    <p className="text-[11px] font-bold leading-tight">{n.message}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    {/* Live SOS Alerts */}
+                    <Card className="glass-card p-8 h-96 overflow-hidden flex flex-col">
+                        <div className="flex items-center gap-3 mb-6">
+                            <span className="p-2 bg-rose-600 rounded-xl text-white text-xs">🆘</span>
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">{t('adminDashboard.sosAlerts')}</h3>
+                        </div>
+                        <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide">
+                            {sosAlerts.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-3 grayscale opacity-40">
+                                    <span className="text-4xl">😴</span>
+                                    <p className="text-[9px] font-black uppercase tracking-widest">{t('adminDashboard.noSOS')}</p>
+                                </div>
+                            ) : sosAlerts.slice(0, 8).map((sos, i) => (
+                                <div key={sos._id || i} className={`p-4 rounded-3xl border-2 transition-colors ${sos.resolved ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50 border-rose-100 shadow-md'}`}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{sos.userName || 'Anonymous'}</p>
+                                        {!sos.resolved && <span className="w-2 h-2 bg-rose-600 rounded-full" />}
+                                    </div>
+                                    <p className="text-xs font-bold text-slate-500 mb-4 line-clamp-1">{sos.message || 'EMERGENCY ASSISTANCE REQUESTED'}</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <span className="grayscale opacity-50">📍</span>
+                                        {sos.location?.address || `${sos.location?.lat?.toFixed(3)}, ${sos.location?.lng?.toFixed(3)}`}
+                                    </p>
+                                    {!sos.resolved ? (
+                                        <button
+                                            onClick={() => handleResolveSOS(sos._id || sos.id)}
+                                            className="w-full bg-rose-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-colors shadow-lg shadow-rose-600/20"
+                                        >
+                                            {t('common.resolve')}
+                                        </button>
+                                    ) : (
+                                        <div className="w-full py-2.5 rounded-xl bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-[0.2em] text-center border border-emerald-200">
+                                            ✓ {t('common.resolved')}
                                         </div>
                                     )}
-                                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                                        {res.type.replace('_', ' ')}
-                                    </span>
                                 </div>
-                            </div>
+                            ))}
                         </div>
-                    ))}
+                    </Card>
                 </div>
-            </AnimatedCard>
 
-            {/* Live Complaints */}
-            <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card mb-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider">{t('adminDashboard.complaints')}</h3>
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
-                            {pendingComplaints} {t('common.pending')}
-                        </span>
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
-                            {resolvedComplaints} {t('common.resolved')}
-                        </span>
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
-                            {complaints.length} {t('common.total')}
-                        </span>
-                    </div>
-                </div>
-                <div className="space-y-2 overflow-y-auto max-h-72 pr-1">
-                    {complaints.length === 0 ? (
-                        <p className="text-sm text-secondary text-center py-4">{t('adminDashboard.noComplaints')}</p>
-                    ) : complaints.slice(0, 15).map((c, i) => (
-                        <div key={c._id || i} className={`text-sm p-4 rounded-xl border-2 ${c.status === 'resolved' ? 'bg-emerald-50 border-risk-low/20' : 'bg-white border-warning/20'}`}>
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-dark">{c.description?.slice(0, 120)}</p>
-                                    <p className="text-xs text-secondary mt-1">
-                                        📍 {c.location} · 👤 {c.userName || 'Citizen'} · 🕐 {c.createdAt ? new Date(c.createdAt).toLocaleString() : 'N/A'}
+                {/* Resource Management */}
+                <div className="mb-12">
+                    <Card className="glass-card p-10 relative overflow-hidden">
+                        <div className="flex items-center justify-between mb-10 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-2xl shadow-xl">
+                                    🚒
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
+                                        {t('adminDashboard.resourceManagement')}
+                                    </h2>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                                        {t('adminDashboard.totalNearbyResources', { count: resources.length })} · FULL CONTROL
                                     </p>
                                 </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${c.status === 'resolved'
-                                        ? 'bg-emerald-100 text-emerald-700'
-                                        : 'bg-amber-100 text-amber-700'
-                                        }`}>
-                                        {c.status === 'resolved' ? `✓ ${t('common.resolved')}` : `⏳ ${t('common.pending')}`}
-                                    </span>
-                                    {c.status === 'pending' && (
-                                        <button
-                                            onClick={() => handleResolveComplaint(c._id || c.id)}
-                                            className="text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-600 transition font-semibold"
-                                        >
-                                            {t('adminDashboard.markResolved')}
-                                        </button>
-                                    )}
-                                </div>
                             </div>
                         </div>
-                    ))}
-                </div>
-            </AnimatedCard>
 
-            {/* Live Symptom Reports */}
-            <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card mb-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider">{t('adminDashboard.symptomReports')}</h3>
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
-                        {symptomReports.length} {t('common.total')}
-                    </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto max-h-72 pr-1">
-                    {symptomReports.length === 0 ? (
-                        <p className="col-span-full text-sm text-secondary text-center py-4">{t('adminDashboard.noReports')}</p>
-                    ) : symptomReports.slice(0, 30).map((r, i) => (
-                        <div key={r._id || i} className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="font-bold text-dark capitalize">{r.location}</p>
-                                <span className="text-[10px] text-secondary">{r.createdAt ? new Date(r.createdAt).toLocaleTimeString() : ''}</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                                {r.symptoms.map(s => (
-                                    <span key={s} className="bg-white px-1.5 py-0.5 rounded text-[10px] text-secondary border border-gray-100">{s}</span>
-                                ))}
-                            </div>
-                            <p className="text-[10px] text-secondary mt-2 opacity-60">👤 {r.userName || 'Citizen'}</p>
-                        </div>
-                    ))}
-                </div>
-            </AnimatedCard>
-
-            {/* AI Briefing */}
-            {clusters?.aiBriefing && (
-                <AnimatedCard className="mb-8 bg-gradient-to-br from-primary/5 to-blue-50 border border-primary/15 rounded-2xl p-6 shadow-card">
-                    <h3 className="text-sm font-semibold text-primary mb-3 flex items-center gap-2 uppercase tracking-wider">
-                        {t('adminDashboard.aiBriefing')}
-                        <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full normal-case">Groq</span>
-                    </h3>
-                    {clusters.aiBriefing.riskSummary && <p className="text-sm text-dark mb-3">{clusters.aiBriefing.riskSummary}</p>}
-                    {clusters.aiBriefing.briefing && <p className="text-sm text-secondary mb-3 italic">{clusters.aiBriefing.briefing}</p>}
-                    {clusters.aiBriefing.priorityActions?.length > 0 && (
-                        <ul className="space-y-1.5">
-                            {clusters.aiBriefing.priorityActions.map((a, i) => (
-                                <li key={i} className="text-sm text-dark flex items-start gap-2">
-                                    <span className="text-primary mt-0.5 font-bold">→</span><span>{a}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </AnimatedCard>
-            )}
-
-            {/* Charts */}
-            {(barData || doughnutData) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    {barData && (
-                        <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-6 shadow-card">
-                            <h3 className="text-sm font-semibold text-secondary mb-4 uppercase tracking-wider">{t('adminDashboard.reportsByArea')}</h3>
-                            <Bar data={barData} options={chartOpts} />
-                        </AnimatedCard>
-                    )}
-                    {doughnutData && (
-                        <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-6 shadow-card">
-                            <h3 className="text-sm font-semibold text-secondary mb-4 uppercase tracking-wider">{t('adminDashboard.outbreakConfidence')}</h3>
-                            <Doughnut data={doughnutData} options={{ responsive: true, plugins: { legend: { labels: { color: '#2E2E2E' } } } }} />
-                        </AnimatedCard>
-                    )}
-                </div>
-            )}
-
-            {/* Cluster alerts */}
-            <h3 className="text-lg font-bold mb-4 text-dark">{t('adminDashboard.outbreakAlerts')}</h3>
-            {clusters?.clusters?.length === 0 && (
-                <div className="bg-emerald-50 border-2 border-risk-low/20 text-emerald-700 px-5 py-4 rounded-2xl shadow-card">
-                    ✅ {t('adminDashboard.noOutbreaks', { hours: clusters.windowHours })}
-                </div>
-            )}
-            {!clusters?.clusters && (
-                <div className="bg-white rounded-2xl p-10 text-center text-secondary shadow-card">
-                    <p className="text-4xl mb-3">📡</p>
-                    <p className="font-medium">{t('adminDashboard.noClusterData')}</p>
-                    <p className="text-sm mt-1">{t('adminDashboard.clusterDetectionHint')}</p>
-                </div>
-            )}
-            <div className="space-y-4">
-                {clusters?.clusters?.map((cluster, i) => {
-                    const level = getLevel(cluster.confidence);
-                    const s = CONFIDENCE_STYLES[level];
-                    return (
-                        <AnimatedCard key={i} delay={i * 0.06} className={`${s.bg} border-2 ${s.border} rounded-2xl p-6 shadow-card`}>
-                            <div className="flex items-center justify-between mb-3">
-                                <div>
-                                    <h4 className="font-bold text-dark text-lg">{cluster.area}</h4>
-                                    <p className={`text-sm font-medium ${s.text}`}>{cluster.predictedDiseaseType}</p>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 relative z-10">
+                            {/* New Resource Form */}
+                            <div className="bg-slate-50/50 rounded-3xl p-8 border border-slate-100">
+                                <div className="mb-6 flex items-center gap-3">
+                                    <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Add New Intel</span>
+                                    <div className="h-px flex-1 bg-slate-200" />
                                 </div>
-                                <span className={`${s.badge} text-xs font-bold px-3 py-1.5 rounded-full`}>
-                                    {(cluster.confidence * 100).toFixed(0)}%
-                                </span>
+                                <ResourceForm onResourceAdded={handleResourceAdded} />
                             </div>
-                            <div className="flex flex-wrap gap-2 mb-3">
-                                {Object.entries(cluster.symptomCounts).map(([symptom, count]) => (
-                                    <span key={symptom} className="bg-white text-secondary text-xs px-2.5 py-1 rounded-lg border border-gray-200 font-medium">
-                                        {symptom}: {count}
-                                    </span>
+
+                            <div className="space-y-4 overflow-y-auto max-h-[500px] pr-4 scrollbar-hide">
+                                <div className="mb-4 flex items-center gap-3">
+                                    <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Live Directory</span>
+                                    <div className="h-px flex-1 bg-slate-200" />
+                                </div>
+                                {resources.length === 0 ? (
+                                    <div className="py-20 flex flex-col items-center justify-center grayscale opacity-30 text-slate-400 gap-4">
+                                        <span className="text-5xl">📄</span>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">{t('adminDashboard.noResources')}</p>
+                                    </div>
+                                ) : resources.slice(0, 20).map((res) => (
+                                    <div key={res._id} className="p-5 rounded-3xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-5">
+                                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-xl border border-slate-100">
+                                                    {RESOURCE_ICONS[res.type] || '📍'}
+                                                </div>
+                                                <div>
+                                                    <p className="font-black text-slate-900 text-sm uppercase tracking-tight">{res.name}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{res.address}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-3">
+                                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+                                                    {res.type.replace('_', ' ')}
+                                                </span>
+                                                {res.type === 'food_point' && (
+                                                    <button
+                                                        onClick={() => handleToggleFood(res._id, !res.status.foodAvailable)}
+                                                        className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-colors ${res.status.foodAvailable
+                                                            ? 'bg-emerald-500 text-white'
+                                                            : 'bg-rose-500 text-white'}`}
+                                                    >
+                                                        {res.status.foodAvailable ? `STOCK: YES` : `STOCK: NO`}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                 ))}
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+
+                {/* Resource Map — lazy loaded */}
+                <div className="mb-8">
+                    <Suspense fallback={<SectionLoader />}>
+                        <LazyResourceMap resources={resources} onToggleFood={handleToggleFood} />
+                    </Suspense>
+                </div>
+
+                {/* Live Complaints */}
+                <Card className="glass-card p-10 mb-12 relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-8 relative z-10">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-2xl shadow-xl shadow-amber-500/20 ring-4 ring-white">
+                                📝
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-secondary mb-1.5 uppercase">{t('adminDashboard.authorityActions')}</p>
-                                <ul className="space-y-1">
-                                    {cluster.recommendedAuthorityAction.map((a, j) => (
-                                        <li key={j} className="text-sm text-dark flex items-start gap-2">
-                                            <span className="text-warning mt-0.5">⚡</span><span>{a}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.complaints')}</h3>
+                                <div className="flex items-center gap-3 mt-1.5">
+                                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                                        {pendingComplaints} {t('common.pending')}
+                                    </span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                                        {resolvedComplaints} {t('common.resolved')}
+                                    </span>
+                                </div>
                             </div>
-                        </AnimatedCard>
-                    );
-                })}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 overflow-y-auto max-h-[400px] pr-4 scrollbar-hide relative z-10">
+                        {complaints.length === 0 ? (
+                            <div className="py-20 flex flex-col items-center justify-center grayscale opacity-30 text-slate-400 gap-4">
+                                <span className="text-5xl">📫</span>
+                                <p className="text-[10px] font-black uppercase tracking-widest">{t('adminDashboard.noComplaints')}</p>
+                            </div>
+                        ) : complaints.slice(0, 10).map((c, i) => (
+                            <div key={c._id || i} className={`p-6 rounded-[2rem] border transition-colors ${c.status === 'resolved' ? 'bg-emerald-50/50 border-emerald-100 opacity-60' : 'bg-white border-slate-100 shadow-sm'}`}>
+                                <div className="flex items-start justify-between gap-6">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-slate-800 leading-relaxed">{c.description}</p>
+                                        <div className="flex flex-wrap items-center gap-3 mt-4">
+                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full">
+                                                <span className="text-[10px]">📍</span>
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{c.location}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full">
+                                                <span className="text-[10px]">👤</span>
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{c.userName || 'Citizen'}</span>
+                                            </div>
+                                            <span className="text-[9px] font-bold text-slate-400 tracking-wider">
+                                                {c.createdAt ? new Date(c.createdAt).toLocaleString() : 'N/A'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex-shrink-0">
+                                        {c.status === 'pending' ? (
+                                            <button
+                                                onClick={() => handleResolveComplaint(c._id || c.id)}
+                                                className="px-6 py-2.5 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
+                                            >
+                                                {t('adminDashboard.markResolved')}
+                                            </button>
+                                        ) : (
+                                            <div className="px-6 py-2.5 bg-slate-200 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-300">
+                                                ✓ {t('common.resolved')}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+
+                {/* Live Symptom Reports */}
+                <Card className="glass-card p-10 mb-12 relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-8 relative z-10">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-2xl shadow-xl shadow-primary/20 ring-4 ring-white">
+                                🌡️
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.symptomReports')}</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
+                                    {symptomReports.length} {t('common.total')} REPORTS DETECTED
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto max-h-[500px] pr-4 scrollbar-hide relative z-10">
+                        {symptomReports.length === 0 ? (
+                            <div className="col-span-full py-20 flex flex-col items-center justify-center grayscale opacity-30 text-slate-400 gap-4">
+                                <span className="text-5xl">🕵️</span>
+                                <p className="text-[10px] font-black uppercase tracking-widest">{t('adminDashboard.noReports')}</p>
+                            </div>
+                        ) : symptomReports.slice(0, 12).map((r, i) => (
+                            <div key={r._id || i} className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex justify-between items-center mb-4">
+                                    <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{r.location}</p>
+                                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">{r.createdAt ? new Date(r.createdAt).toLocaleTimeString() : ''}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {r.symptoms.map(s => (
+                                        <span key={s} className="px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">{s}</span>
+                                    ))}
+                                </div>
+                                <div className="mt-6 pt-4 border-t border-slate-50 flex items-center gap-2">
+                                    <div className="w-5 h-5 bg-slate-100 rounded-lg flex items-center justify-center text-[10px]">👤</div>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{r.userName || 'Citizen'}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+
+                {/* AI Briefing */}
+                {clusters?.aiBriefing && (
+                    <Card className="mb-12 glass-card p-10 relative overflow-hidden">
+                        <div className="flex items-center justify-between mb-8 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-2xl shadow-xl shadow-slate-900/10">
+                                    🧠
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
+                                        {t('adminDashboard.aiBriefing')}
+                                    </h3>
+                                    <div className="flex items-center gap-2 mt-1.5">
+                                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">AI-POWERED INTELLIGENCE · GROQ LPU</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 relative z-10">
+                            <div className="space-y-6">
+                                {clusters.aiBriefing.riskSummary && (
+                                    <div className="bg-white/50 rounded-3xl p-6 border border-white shadow-inner">
+                                        <p className="text-sm font-bold text-slate-700 leading-relaxed italic">"{clusters.aiBriefing.riskSummary}"</p>
+                                    </div>
+                                )}
+                                {clusters.aiBriefing.briefing && (
+                                    <div className="p-2">
+                                        <p className="text-[13px] font-medium text-slate-500 leading-relaxed">{clusters.aiBriefing.briefing}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {clusters.aiBriefing.priorityActions?.length > 0 && (
+                                <div className="bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6">Immediate Tactical Actions</p>
+                                    <ul className="space-y-4">
+                                        {clusters.aiBriefing.priorityActions.map((a, i) => (
+                                            <li key={i} className="flex items-start gap-4">
+                                                <span className="w-6 h-6 rounded-lg bg-primary/20 text-primary flex items-center justify-center text-xs font-black shrink-0">{i + 1}</span>
+                                                <span className="text-slate-300 text-[13px] font-medium leading-snug">{a}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+                )}
+
+                {/* Charts — lazy loaded */}
+                <Suspense fallback={<SectionLoader />}>
+                    <LazyCharts clusters={clusters} t={t} />
+                </Suspense>
+
+                {/* Cluster alerts */}
+                <div className="flex items-center gap-4 mb-8 mt-12">
+                    <div className="w-10 h-10 bg-rose-600 rounded-2xl flex items-center justify-center text-lg shadow-lg shadow-rose-600/20">📡</div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.outbreakAlerts')}</h3>
+                </div>
+
+                {clusters?.clusters?.length === 0 && (
+                    <div className="glass-card p-12 text-center relative overflow-hidden">
+                        <span className="text-5xl block mb-6">✅</span>
+                        <p className="text-sm font-black text-emerald-600 uppercase tracking-[0.2em]">{t('adminDashboard.noOutbreaks', { hours: clusters.windowHours })}</p>
+                    </div>
+                )}
+
+                {!clusters?.clusters && (
+                    <div className="glass-card p-16 text-center">
+                        <div className="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center text-4xl shadow-inner mx-auto mb-8 border border-slate-100">📡</div>
+                        <p className="text-xs font-black text-slate-900 uppercase tracking-[0.2em] mb-3">{t('adminDashboard.noClusterData')}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('adminDashboard.clusterDetectionHint')}</p>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {clusters?.clusters?.map((cluster, i) => {
+                        const level = getLevel(cluster.confidence);
+                        return (
+                            <Card key={i} className={`glass-card p-10 relative overflow-hidden border-l-[6px] ${level === 'high' ? 'border-l-rose-600' : level === 'medium' ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
+                                <div className="flex items-center justify-between mb-8 relative z-10">
+                                    <div>
+                                        <h4 className="text-2xl font-black text-slate-900 tracking-tight uppercase mb-1">{cluster.area}</h4>
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-2 h-2 rounded-full ${level === 'high' ? 'bg-rose-600 animate-pulse' : level === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{cluster.predictedDiseaseType}</p>
+                                        </div>
+                                    </div>
+                                    <div className={`px-5 py-2.5 rounded-2xl ${level === 'high' ? 'bg-rose-600 text-white' : level === 'medium' ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white'} text-sm font-black tracking-tighter`}>
+                                        {(cluster.confidence * 100).toFixed(0)}%
+                                    </div>
+                                </div>
+
+                                <div className="mb-8 relative z-10">
+                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4">Symptom Distribution</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {Object.entries(cluster.symptomCounts).map(([symptom, count]) => (
+                                            <span key={symptom} className="px-3.5 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                                                {symptom}: <span className="text-slate-900 ml-1">{count}</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="relative z-10">
+                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4">{t('adminDashboard.authorityActions')}</p>
+                                    <div className="space-y-3">
+                                        {cluster.recommendedAuthorityAction.map((a, j) => (
+                                            <div key={j} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3 hover:bg-white transition-colors">
+                                                <span className="text-amber-500 text-sm mt-0.5">⚡</span>
+                                                <span className="text-[13px] font-bold text-slate-600 leading-snug">{a}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </Card>
+                        );
+                    })}
+                </div>
+
+                <div className="mt-20 text-center relative z-10">
+                    <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full bg-slate-900/5 backdrop-blur-sm border border-slate-900/10">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.5em]">Central Command Hub v2.0</span>
+                        <div className="w-1 h-1 bg-primary rounded-full" />
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.5em]">{new Date().getFullYear()} Resilience Network</span>
+                    </div>
+                </div>
             </div>
         </PageTransition>
     );

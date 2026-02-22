@@ -27,7 +27,17 @@ export const loginUser = (data) => API.post('/auth/login', data);
 export const adminLogin = (data) => API.post('/auth/admin-login', data);
 
 // Existing API
-export const fetchRisk = (city) => API.get(`/risk?city=${encodeURIComponent(city)}`);
+export const fetchRisk = (params) => {
+    if (typeof params === 'string') return API.get(`/risk?city=${encodeURIComponent(params)}`);
+    const { lat, lon, city } = params;
+    const query = new URLSearchParams();
+    if (city) query.append('city', city);
+    if (lat != null && lon != null) {
+        query.append('lat', lat);
+        query.append('lon', lon);
+    }
+    return API.get(`/risk?${query.toString()}`);
+};
 export const fetchChecklist = (data) => API.post('/preparedness', data);
 export const submitReport = (data) => API.post('/report', data);
 export const fetchReports = () => API.get('/report');

@@ -173,27 +173,42 @@ export default function UserDashboard() {
 
     return (
         <PageTransition>
-            <div className="mb-8">
-                <h1 className="text-3xl font-extrabold text-dark mb-1">
-                    {t('userDashboard.welcome')} <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">{user?.name || 'Citizen'}</span>
-                </h1>
-                <p className="text-secondary text-sm">{t('userDashboard.personalizedHub')}</p>
+            <div className="mb-12 pt-4">
+                <motion.h1
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-4xl font-black text-slate-900 mb-2 tracking-tight"
+                >
+                    {t('userDashboard.welcome')} <span className="bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">{user?.name || 'Citizen'}</span>
+                </motion.h1>
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-slate-500 font-medium"
+                >
+                    {t('userDashboard.personalizedHub')}
+                </motion.p>
             </div>
 
-            {/* Seasonal Hazard Banner (TN DMP) */}
+            {/* Seasonal Hazard Banner (TN DMP) - Refined glass banner */}
             <AnimatePresence>
                 {showSeasonBanner && (
                     <motion.div
-                        initial={{ opacity: 0, y: -15 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, height: 0 }}
-                        className={`mb-4 border-2 rounded-2xl px-5 py-3 flex items-start gap-3 ${season.color}`}
+                        className={`mb-8 p-6 rounded-[2rem] border-2 glass-morphism relative overflow-hidden flex items-center gap-5 shadow-lg ${season.color.replace('bg-', 'bg-opacity-5 ')} border-opacity-20`}
+                        style={{ borderColor: season.color.includes('blue') ? '#3B82F644' : season.color.includes('violet') ? '#8B5CF644' : season.color.includes('orange') ? '#F59E0B44' : '#10B98144' }}
                     >
-                        <div className="flex-1">
-                            <p className="text-sm font-bold">{season.label}</p>
-                            <p className="text-xs opacity-80">{season.sub}</p>
+                        <div className="p-3 bg-white/50 rounded-2xl shadow-sm text-2xl">
+                            {season.label.split(' ')[0]}
                         </div>
-                        <button onClick={() => setShowSeasonBanner(false)} className="text-sm opacity-60 hover:opacity-100 mt-0.5">✕</button>
+                        <div className="flex-1">
+                            <p className="text-sm font-black text-slate-900 uppercase tracking-widest leading-none mb-1">{season.label.substring(season.label.indexOf(' ') + 1)}</p>
+                            <p className="text-xs font-bold text-slate-500 mt-1">{season.sub}</p>
+                        </div>
+                        <button onClick={() => setShowSeasonBanner(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-slate-400 transition-colors">✕</button>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -206,253 +221,292 @@ export default function UserDashboard() {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mb-3 bg-amber-50 border-2 border-warning/20 rounded-2xl px-5 py-3 flex items-start gap-3 alert-banner"
+                        className="mb-4 glass-card border-amber-500/20 px-6 py-4 flex items-center gap-4 group"
                     >
-                        <span className="text-xl mt-0.5">⚡</span>
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-xl animate-pulse">⚡</div>
                         <div>
-                            <p className="text-sm font-semibold text-dark">{t('userDashboard.proactiveAdvisory')}</p>
-                            <p className="text-xs text-secondary">{alert.message}</p>
+                            <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-0.5">{t('userDashboard.proactiveAdvisory')}</p>
+                            <p className="text-sm font-bold text-slate-700">{alert.message}</p>
                         </div>
                     </motion.div>
                 ))}
             </AnimatePresence>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {/* Quick Actions - Unified glass grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
                 {[
-                    { icon: '🌡️', label: t('userDashboard.reportSymptoms'), action: () => navigate('/report'), color: 'from-red-500 to-red-400' },
-                    { icon: '🗺️', label: t('userDashboard.viewMap'), action: () => navigate('/map'), color: 'from-emerald-500 to-emerald-400' },
-                    { icon: '📢', label: t('nav.alerts'), action: () => navigate('/alerts'), color: 'from-amber-500 to-orange-400' },
-                    { icon: '🏠', label: t('userDashboard.riskCheck'), action: () => navigate('/home'), color: 'from-primary to-blue-400' },
+                    { icon: '🌡️', label: t('userDashboard.reportSymptoms'), action: () => navigate('/report'), color: '#EF4444' },
+                    { icon: '🗺️', label: t('userDashboard.viewMap'), action: () => navigate('/map'), color: '#10B981' },
+                    { icon: '📢', label: t('nav.alerts'), action: () => navigate('/alerts'), color: '#F59E0B' },
+                    { icon: '🏠', label: t('userDashboard.riskCheck'), action: () => navigate('/home'), color: '#2563EB' },
                 ].map((btn, i) => (
                     <AnimatedCard key={i} delay={i * 0.05}>
                         <button onClick={btn.action}
-                            className={`w-full bg-gradient-to-br ${btn.color} text-white rounded-2xl p-5 text-left shadow-card hover:shadow-card-hover transition-all active:scale-[0.97]`}>
-                            <span className="text-2xl block mb-2">{btn.icon}</span>
-                            <span className="text-sm font-semibold">{btn.label}</span>
+                            className="w-full glass-card p-8 text-left group relative overflow-hidden transition-all active:scale-95">
+                            <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl -mr-12 -mt-12 transition-colors group-hover:bg-opacity-20" style={{ backgroundColor: `${btn.color}11` }} />
+                            <div className="p-4 bg-white rounded-2xl shadow-sm mb-4 w-fit group-hover:scale-110 transition-transform duration-500" style={{ boxShadow: `0 10px 15px -3px ${btn.color}22` }}>
+                                <span className="text-2xl">{btn.icon}</span>
+                            </div>
+                            <span className="text-sm font-black text-slate-900 tracking-tight leading-tight block">{btn.label}</span>
                         </button>
                     </AnimatedCard>
                 ))}
             </div>
 
-            {/* SOS + Emergency Section */}
-            <AnimatedCard className="bg-white border-2 border-gray-200 rounded-2xl p-6 shadow-card mb-6">
-                <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider mb-4">{t('userDashboard.emergencyResponse')}</h3>
-                <div className="flex flex-col sm:flex-row gap-4">
-                    {/* SOS Button */}
-                    <button
-                        onClick={handleSOS}
-                        disabled={sosLoading || sosSent}
-                        className={`flex-1 py-5 rounded-3xl font-black text-2xl transition-all tracking-tight ${sosSent
-                            ? 'bg-slate-800 text-white shadow-lg'
-                            : 'bg-emergency text-white hover:brightness-110 shadow-lg shadow-emergency/30 active:scale-[0.95] sos-pulse'
-                            } disabled:opacity-70`}
-                    >
-                        {sosLoading ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <span className="animate-spin h-6 w-6 border-3 border-white border-t-transparent rounded-full" />
-                                {t('userDashboard.sendingSOS')}
-                            </span>
-                        ) : sosSent ? (
-                            t('userDashboard.sosSentHelp')
-                        ) : (
-                            <span className="flex items-center justify-center gap-3">
-                                <span className="text-3xl">🚨</span>
-                                {t('userDashboard.sosEmergency')}
-                            </span>
-                        )}
-                    </button>
+            {/* SOS + Emergency Section - Premium Control Tray */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                <AnimatedCard className="lg:col-span-2 glass-card p-10 border-rose-500/10 shadow-2xl shadow-rose-500/5 relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-transparent opacity-20" />
 
-                    <div className="flex flex-col gap-3 min-w-[200px]">
-                        {/* Safe Button */}
-                        <button onClick={markSafe}
-                            className={`py-4 px-6 rounded-2xl font-bold transition-all ${safeStatus === 'safe'
-                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200'
-                                : 'bg-emerald-50 text-emerald-600 border-2 border-emerald-100 hover:bg-emerald-100/50'}`}
-                        >
-                            {t('userDashboard.iAmSafe')}
-                        </button>
+                    <div className="flex flex-col md:flex-row gap-10 items-center">
+                        <div className="flex-1 text-center md:text-left">
+                            <h3 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em] mb-3">{t('userDashboard.emergencyResponse')}</h3>
+                            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tighter">Instant Support</h2>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed max-w-xs mx-auto md:mx-0">
+                                Trigger immediate assistance or mark yourself as safe during an active crisis.
+                            </p>
+                        </div>
 
-                        {/* Emergency Call */}
-                        <a href="tel:112"
-                            className="py-4 px-6 rounded-2xl font-bold text-center bg-slate-900 text-white shadow-lg shadow-slate-200 hover:bg-black transition-all"
-                        >
-                            {t('userDashboard.call112')}
-                        </a>
-                    </div>
-                </div>
-
-                {/* File Complaint */}
-                <button
-                    onClick={() => setShowComplaint(!showComplaint)}
-                    className="mt-4 text-sm text-primary font-semibold hover:underline"
-                >
-                    {showComplaint ? t('common.cancel') : t('userDashboard.fileComplaint')}
-                </button>
-
-                <AnimatePresence>
-                    {showComplaint && (
-                        <motion.form
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            onSubmit={handleComplaint}
-                            className="mt-4 space-y-3 overflow-hidden"
-                        >
-                            <input
-                                type="text"
-                                placeholder={t('userDashboard.complaintLocationPlaceholder')}
-                                value={complaintLocation}
-                                onChange={(e) => setComplaintLocation(e.target.value)}
-                                required
-                                className="w-full bg-surface border border-gray-200 rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                            />
-                            <textarea
-                                placeholder={t('userDashboard.complaintDescPlaceholder')}
-                                value={complaintDesc}
-                                onChange={(e) => setComplaintDesc(e.target.value)}
-                                required
-                                rows={3}
-                                className="w-full bg-surface border border-gray-200 rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
-                            />
+                        <div className="flex flex-col gap-4 w-full md:w-[320px]">
                             <button
-                                type="submit"
-                                disabled={complaintLoading}
-                                className="bg-primary text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-primary/90 transition disabled:bg-gray-300"
+                                onClick={handleSOS}
+                                disabled={sosLoading || sosSent}
+                                className={`w-full py-6 rounded-3xl font-black text-xl transition-all shadow-2xl relative overflow-hidden ${sosSent
+                                    ? 'bg-slate-900 text-white'
+                                    : 'bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-rose-500/30 active:scale-95 sos-pulse'
+                                    }`}
                             >
-                                {complaintLoading ? t('userDashboard.submittingComplaint') : t('userDashboard.submitComplaint')}
+                                {sosLoading ? (
+                                    <div className="flex items-center justify-center gap-3">
+                                        <div className="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full" />
+                                        <span>SIGNALLING...</span>
+                                    </div>
+                                ) : sosSent ? 'HELP IS COMING' : 'TRIGGER SOS'}
                             </button>
-                        </motion.form>
-                    )}
-                </AnimatePresence>
-            </AnimatedCard>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Current Risk */}
-                <div>
-                    <h3 className="text-lg font-bold text-dark mb-3">{t('userDashboard.currentRiskOverview')}</h3>
-                    {loading ? <CardSkeleton /> : riskData ? (
-                        <div className="space-y-3">
+                            <div className="flex gap-4">
+                                <button onClick={markSafe}
+                                    className={`flex-1 py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${safeStatus === 'safe'
+                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200'
+                                        : 'bg-white border-2 border-slate-100 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-100'}`}
+                                >
+                                    {t('userDashboard.iAmSafe')}
+                                </button>
+                                <a href="tel:112"
+                                    className="flex-1 py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center bg-slate-900 text-white hover:bg-black transition-all"
+                                >
+                                    {t('userDashboard.call112')}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
+                        <button
+                            onClick={() => setShowComplaint(!showComplaint)}
+                            className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-blue-700"
+                        >
+                            {showComplaint ? t('common.cancel') : t('userDashboard.fileComplaint')}
+                        </button>
+                        <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Response Team Online</span>
+                        </div>
+                    </div>
+
+                    <AnimatePresence>
+                        {showComplaint && (
+                            <motion.form
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                onSubmit={handleComplaint}
+                                className="mt-6 space-y-4"
+                            >
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <input
+                                        type="text"
+                                        placeholder={t('userDashboard.complaintLocationPlaceholder')}
+                                        value={complaintLocation}
+                                        onChange={(e) => setComplaintLocation(e.target.value)}
+                                        required
+                                        className="premium-input text-xs"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={complaintLoading}
+                                        className="premium-button text-[10px] py-4"
+                                    >
+                                        {complaintLoading ? 'SUBMITTING...' : t('userDashboard.submitComplaint')}
+                                    </button>
+                                </div>
+                                <textarea
+                                    placeholder={t('userDashboard.complaintDescPlaceholder')}
+                                    value={complaintDesc}
+                                    onChange={(e) => setComplaintDesc(e.target.value)}
+                                    required
+                                    rows={2}
+                                    className="premium-input text-xs resize-none"
+                                />
+                            </motion.form>
+                        )}
+                    </AnimatePresence>
+                </AnimatedCard>
+
+                {/* Preparedness Score - Refined UI */}
+                <AnimatedCard className="glass-card p-10 flex flex-col justify-center items-center text-center group">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Readiness Score</h3>
+                    <div className="relative w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-500">
+                        <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="16" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                            <circle cx="18" cy="18" r="16" fill="none"
+                                stroke={prepScore >= 70 ? '#10b981' : prepScore >= 40 ? '#f59e0b' : '#ef4444'}
+                                strokeWidth="3"
+                                strokeDasharray={`${prepScore} 100`}
+                                strokeLinecap="round"
+                                className="transition-all duration-1000 ease-out" />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-3xl font-black text-slate-900 tracking-tighter">{prepScore}%</span>
+                        </div>
+                    </div>
+                    <p className="text-sm font-black text-slate-900 mb-2 uppercase tracking-wide">
+                        {prepScore >= 70 ? 'Resilient' : prepScore >= 40 ? 'Vulnerable' : 'At Risk'}
+                    </p>
+                    <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-widest">
+                        Refine your kit to increase resilience
+                    </p>
+                </AnimatedCard>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:items-start">
+                {/* Current Risk - Redesigned List */}
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                        <h3 className="text-xl font-black text-slate-900 tracking-tight">{t('userDashboard.currentRiskOverview')}</h3>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Updates</span>
+                    </div>
+                    {loading ? <div className="space-y-4"><CardSkeleton /><CardSkeleton /></div> : riskData ? (
+                        <div className="space-y-6">
                             {riskData.risks.map((risk, i) => (
                                 <AnimatedCard key={i} delay={i * 0.08}>
                                     <RiskCard risk={risk} />
                                 </AnimatedCard>
                             ))}
                             {riskData.riskTimeline && (
-                                <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card">
-                                    <h4 className="text-sm font-semibold text-secondary mb-3">{t('userDashboard.riskTimeline')}</h4>
-                                    <div className="space-y-2">
-                                        <div>
-                                            <p className="text-xs text-secondary mb-1 font-medium">{t('userDashboard.next24h')}</p>
-                                            {riskData.riskTimeline.next24h.map((r, i) => (
-                                                <div key={i} className="flex items-center justify-between text-sm py-0.5">
-                                                    <span className="text-dark">{r.disasterType}</span>
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.projectedRisk === 'HIGH' ? 'bg-red-100 text-risk-high' : r.projectedRisk === 'MEDIUM' ? 'bg-amber-100 text-warning' : 'bg-emerald-100 text-risk-low'
-                                                        }`}>{r.trend === 'increasing' ? '↑' : '→'} {r.projectedRisk}</span>
+                                <AnimatedCard className="glass-card p-8">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('userDashboard.riskTimeline')}</h4>
+                                    </div>
+                                    <div className="space-y-5">
+                                        {riskData.riskTimeline.next24h.map((r, i) => (
+                                            <div key={i} className="flex items-center justify-between group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-xs group-hover:bg-primary/10 transition-colors">
+                                                        {i + 1}
+                                                    </div>
+                                                    <span className="text-sm font-black text-slate-700 tracking-tight">{r.disasterType}</span>
                                                 </div>
-                                            ))}
-                                        </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase">{r.trend === 'increasing' ? 'Tide Up ✓' : 'Stable'}</span>
+                                                    <span className={`text-[10px] px-3 py-1 rounded-full font-black tracking-widest uppercase ${r.projectedRisk === 'HIGH' ? 'bg-rose-50 text-rose-500' :
+                                                        r.projectedRisk === 'MEDIUM' ? 'bg-amber-50 text-amber-600' :
+                                                            'bg-emerald-50 text-emerald-600'
+                                                        }`}>
+                                                        {r.projectedRisk}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </AnimatedCard>
                             )}
                         </div>
                     ) : (
-                        <div className="bg-white rounded-2xl p-8 text-center text-secondary shadow-card">
-                            <p className="text-3xl mb-2">📊</p>
-                            <p className="text-sm">{t('userDashboard.unableToLoad')}</p>
+                        <div className="glass-card p-12 text-center">
+                            <div className="text-4xl mb-4 opacity-20">📊</div>
+                            <p className="text-sm font-black text-slate-400 uppercase tracking-widest">{t('userDashboard.unableToLoad')}</p>
                         </div>
                     )}
                 </div>
 
-                {/* Emergency Kit + Alerts */}
-                <div>
-                    <h3 className="text-lg font-bold text-dark mb-3">{t('userDashboard.emergencyKit')}</h3>
-                    <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card">
-                        <p className="text-xs text-secondary mb-3">{t('userDashboard.basedOnFamily')} <strong className="text-dark">{familySize}</strong></p>
-                        <ul className="space-y-2">
-                            {kit.map((item, i) => (
-                                <li key={i}
-                                    onClick={() => toggleKitItem(item)}
-                                    className={`flex items-center gap-3 text-sm cursor-pointer rounded-xl px-2 py-1.5 transition-colors ${kitChecked[item] ? 'bg-emerald-50 text-emerald-800' : 'text-dark/85 hover:bg-gray-50'}`}>
-                                    <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${kitChecked[item] ? 'bg-emerald-500 text-white' : 'bg-primary/10 text-primary'}`}>
-                                        {kitChecked[item] ? '✓' : i + 1}
-                                    </span>
-                                    <span className={kitChecked[item] ? 'line-through opacity-60' : ''}>{t(`kitItems.${item}`, item)}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        <p className="mt-3 text-xs text-secondary">{checkedCount}/{kit.length} {t('checklist.items', { count: checkedCount })} checked</p>
-                    </AnimatedCard>
-
-                    <h3 className="text-lg font-bold text-dark mb-3 mt-6">{t('userDashboard.recentAlerts')}</h3>
-                    <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card">
-                        <div className="space-y-3">
-                            {liveAlerts.length > 0 ? liveAlerts.slice(0, 4).map((alert, i) => (
-                                <div key={alert._id || i} className={`flex items-start gap-3 p-3 rounded-xl ${alert.severity === 'CRITICAL' ? 'bg-red-50' : alert.severity === 'HIGH' ? 'bg-amber-50' : 'bg-blue-50'}`}>
-                                    <span>{alert.severity === 'CRITICAL' ? '🔴' : alert.severity === 'HIGH' ? '🟡' : 'ℹ'}</span>
-                                    <div>
-                                        <p className="text-sm font-medium text-dark">{alert.message?.slice(0, 100)}</p>
-                                        <p className="text-xs text-secondary">{alert.area} · {alert.type}</p>
-                                    </div>
+                {/* Kit & Alerts Tray */}
+                <div className="space-y-10">
+                    <div className="glass-card overflow-hidden">
+                        <div className="p-8 border-b border-slate-100 bg-slate-50/30">
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-xl font-black text-slate-900 tracking-tight">{t('userDashboard.emergencyKit')}</h3>
+                                <div className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg">Level {familySize}</div>
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Calculated for your household</p>
+                        </div>
+                        <div className="p-8">
+                            <ul className="space-y-3">
+                                {kit.map((item, i) => (
+                                    <li key={i}
+                                        onClick={() => toggleKitItem(item)}
+                                        className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all ${kitChecked[item] ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black ${kitChecked[item] ? 'bg-white/20' : 'bg-white shadow-sm'}`}>
+                                                {i + 1}
+                                            </span>
+                                            <span className={`text-sm font-black tracking-tight ${kitChecked[item] ? '' : 'text-slate-600'}`}>{t(`kitItems.${item}`, item)}</span>
+                                        </div>
+                                        {kitChecked[item] && <span className="text-lg font-black tracking-tight leading-none bg-white/20 px-2.5 py-1 rounded-lg">✓</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-between">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{checkedCount}/{kit.length} COMPLETED</span>
+                                <div className="w-48 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${(checkedCount / kit.length) * 100}%` }} />
                                 </div>
-                            )) : (
-                                <>
-                                    <div className="flex items-start gap-3 p-3 bg-amber-50 rounded-xl">
-                                        <span className="text-warning">⚠</span>
-                                        <div>
-                                            <p className="text-sm font-medium text-dark">{t('userDashboard.heavyRainfall')}</p>
-                                            <p className="text-xs text-secondary">{t('userDashboard.mumbaiRegion')}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-xl">
-                                        <span className="text-primary">ℹ</span>
-                                        <div>
-                                            <p className="text-sm font-medium text-dark">{t('userDashboard.dengueAdvisory')}</p>
-                                            <p className="text-xs text-secondary">{t('userDashboard.postMonsoon')}</p>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                        <Link to="/alerts" className="block text-center text-sm text-primary font-semibold mt-4 hover:underline">{t('userDashboard.viewAllAlerts')}</Link>
-                    </AnimatedCard>
-                    {/* Preparedness Score (TN DMP) */}
-                    <AnimatedCard className="bg-white border border-gray-200 rounded-2xl p-5 shadow-card mt-6">
-                        <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider mb-3">📊 Preparedness Score</h3>
-                        <div className="flex items-center gap-4">
-                            <div className="relative w-16 h-16 flex-shrink-0">
-                                <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
-                                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
-                                    <circle cx="18" cy="18" r="15.9" fill="none"
-                                        stroke={prepScore >= 70 ? '#10b981' : prepScore >= 40 ? '#f59e0b' : '#ef4444'}
-                                        strokeWidth="3"
-                                        strokeDasharray={`${prepScore} ${100 - prepScore}`}
-                                        strokeLinecap="round" />
-                                </svg>
-                                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-dark">{prepScore}%</span>
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-semibold text-dark">{prepScore >= 70 ? '✅ Well Prepared' : prepScore >= 40 ? '⚠️ Partially Prepared' : '🔴 Needs Attention'}</p>
-                                <p className="text-xs text-secondary mt-1">Check kit items, run SOS, and complete a mock drill to improve your score.</p>
                             </div>
                         </div>
-                    </AnimatedCard>
+                    </div>
 
-                    {/* Mock Drill Scheduler (TN DMP) */}
-                    <AnimatedCard className={`border-2 rounded-2xl p-5 shadow-card mt-4 ${drillDue ? 'bg-amber-50 border-amber-300' : 'bg-emerald-50 border-emerald-200'}`}>
-                        <h3 className="text-sm font-semibold text-secondary uppercase tracking-wider mb-2">📅 Mock Drill Schedule</h3>
-                        <p className="text-sm text-dark font-medium">
-                            {daysSinceDrill === null ? '⚠️ You have never run a family emergency drill.' :
-                                drillDue ? `⚠️ Last drill was ${daysSinceDrill} days ago — a new drill is due!` :
-                                    `✅ Last drill: ${daysSinceDrill}d ago — next drill in ${30 - daysSinceDrill} days.`}
+                    {/* Mock Drill - Premium Alert Style */}
+                    <div className={`glass-card p-10 border-2 overflow-hidden relative group ${drillDue ? 'border-amber-500/20 shadow-amber-500/5' : 'border-emerald-500/20 shadow-emerald-500/5'}`}>
+                        <div className={`absolute top-0 right-0 w-4 h-full opacity-20 ${drillDue ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">DRILL PROTOCOL</h3>
+                        <p className="text-lg font-black text-slate-900 leading-snug tracking-tight mb-4">
+                            {daysSinceDrill === null ? 'Protocol hasn\'t been tested yet.' :
+                                drillDue ? `Protocol expires in ${daysSinceDrill} days. Refresh now.` :
+                                    `Next protocol check in ${30 - daysSinceDrill} days.`}
                         </p>
-                        <p className="text-xs text-secondary mt-1 mb-3">TN DMP recommends practising evacuation routes with all family members monthly.</p>
+                        <p className="text-xs text-slate-500 font-medium mb-8 leading-relaxed">
+                            Practising evacuation routes is critical for family safety.
+                        </p>
                         <button
                             onClick={markDrillDone}
-                            className="w-full py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:brightness-110 transition-all">
-                            ✅ Mark Drill Complete Today
+                            className={`premium-button w-full shadow-none ${drillDue ? 'bg-amber-500 shadow-amber-500/20' : 'bg-emerald-500 shadow-emerald-500/20'}`}>
+                            {drillDue ? 'RUN DRILL NOW' : 'REFRESH PROTOCOL'}
                         </button>
-                    </AnimatedCard>
+                    </div>
+
+                    {/* Recent Alerts List */}
+                    <div className="glass-card p-8">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="text-lg font-black text-slate-900 tracking-tight">{t('userDashboard.recentAlerts')}</h3>
+                            <Link to="/alerts" className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">{t('userDashboard.viewAllAlerts')}</Link>
+                        </div>
+                        <div className="space-y-4">
+                            {(liveAlerts.length > 0 ? liveAlerts.slice(0, 3) : []).map((alert, i) => (
+                                <div key={alert._id || i} className="p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className={`text-[9px] font-black uppercase tracking-widest ${alert.severity === 'CRITICAL' ? 'text-rose-500' : 'text-amber-600'
+                                            }`}>{alert.severity}</span>
+                                        <span className="text-[9px] font-black text-slate-300 uppercase">{alert.type}</span>
+                                    </div>
+                                    <p className="text-xs font-bold text-slate-700 leading-relaxed mb-3">{alert.message?.slice(0, 80)}...</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{alert.area}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </PageTransition>

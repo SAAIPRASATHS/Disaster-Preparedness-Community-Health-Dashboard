@@ -62,7 +62,8 @@
         "getRealTime": "मौसम आधारित वास्तविक समय आपदा जोखिम मूल्यांकन प्राप्त करें",
         "usingEstimated": "अनुमानित डेटा का उपयोग — मौसम API अनुपलब्ध",
         "riskAssessedFor": "{{city}} के लिए जोखिम मूल्यांकन किया गया",
-        "failedFetch": "जोखिम डेटा प्राप्त करने में विफल। कृपया पुनः प्रयास करें।"
+        "failedFetch": "जोखिम डेटा प्राप्त करने में विफल। कृपया पुनः प्रयास करें।",
+        "autoScanning": "स्वचालित स्थान स्कैनिंग"
     },
     "login": {
         "welcomeBack": "वापस स्वागत है",
@@ -147,7 +148,14 @@
         "zoomInForServices": "आपातकालीन सेवाओं को देखने के लिए ज़ूम इन करें",
         "noServicesNearby": "इस क्षेत्र में कोई सेवा नहीं मिली",
         "foundServices": "पास में {{count}} सेवाएँ मिलीं",
-        "fetchError": "सेवाएँ प्राप्त करने में विफल। फिर से कोशिश करें।"
+        "fetchError": "सेवाएँ प्राप्त करने में विफल। फिर से कोशिश करें।",
+        "scanAreaForHelp": "मदद के लिए क्षेत्र स्कैन करें",
+        "detectedNearby": "पास में पाया गया",
+        "hospitalsNearMe": "मेरे पास अस्पताल",
+        "locateOnMap": "नक्शे पर देखें",
+        "contact": "संपर्क",
+        "kmAway": "किमी दूर",
+        "nearby": "पास में"
     },
     "userDashboard": {
         "welcome": "स्वागत है,",
@@ -220,7 +228,17 @@
         "sosResolveFailed": "SOS समाधान करने में विफल",
         "complaintResolved": "शिकायत समाधान हुई",
         "complaintResolveFailed": "शिकायत समाधान करने में विफल",
-        "foodStatusUpdated": "{{name}} के लिए भोजन स्थिति अपडेट की गई"
+        "foodStatusUpdated": "{{name}} के लिए भोजन स्थिति अपडेट की गई",
+        "addResource": "नया संसाधन जोड़ें",
+        "resourceName": "संसाधन का नाम",
+        "resourceType": "संसाधन का प्रकार",
+        "latitude": "अक्षांश (Latitude)",
+        "longitude": "देशांतर (Longitude)",
+        "address": "पता",
+        "contact": "संपर्क",
+        "adding": "जोड़ा जा रहा है...",
+        "resourceAdded": "संसाधन सफलतापूर्वक जोड़ा गया!",
+        "rescueCenter": "बचाव केंद्र"
     },
     "chatbot": {
         "title": "स्वास्थ्य और आपदा बॉट",

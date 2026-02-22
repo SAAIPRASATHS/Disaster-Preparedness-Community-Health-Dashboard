@@ -26,10 +26,10 @@ export function ToastProvider({ children }) {
     };
 
     const COLORS = {
-        success: 'bg-emerald-600',
-        error: 'bg-red-500',
-        info: 'bg-primary',
-        warning: 'bg-warning',
+        success: 'bg-emerald-500/90',
+        error: 'bg-rose-500/90',
+        info: 'bg-primary/90',
+        warning: 'bg-amber-500/90',
     };
     const ICONS = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
 
@@ -37,14 +37,16 @@ export function ToastProvider({ children }) {
         <ToastContext.Provider value={toast}>
             {children}
             {/* Toast Container */}
-            <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+            <div className="fixed top-8 right-8 z-[9999] flex flex-col gap-3 pointer-events-none">
                 {toasts.map((t) => (
                     <div
                         key={t.id}
-                        className={`${t.exiting ? 'toast-exit' : 'toast-enter'} ${COLORS[t.type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-medium pointer-events-auto max-w-xs`}
+                        className={`${t.exiting ? 'toast-exit' : 'toast-enter'} ${COLORS[t.type]} backdrop-blur-xl border border-white/20 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 pointer-events-auto max-w-sm`}
                     >
-                        <span className="text-base">{ICONS[t.type]}</span>
-                        <span>{t.message}</span>
+                        <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-sm font-black shrink-0">
+                            {ICONS[t.type]}
+                        </div>
+                        <span className="text-[12px] font-black uppercase tracking-widest">{t.message}</span>
                     </div>
                 ))}
             </div>

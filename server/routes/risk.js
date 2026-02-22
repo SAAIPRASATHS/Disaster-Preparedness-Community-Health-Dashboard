@@ -6,10 +6,12 @@ const router = express.Router();
 // GET /api/risk?city=Mumbai
 router.get('/', async (req, res) => {
     try {
-        const { city } = req.query;
-        if (!city) return res.status(400).json({ error: 'city query parameter is required' });
+        const { city, lat, lon } = req.query;
+        if (!city && (!lat || !lon)) {
+            return res.status(400).json({ error: 'city or lat/lon coordinates are required' });
+        }
 
-        const assessment = await assessRisk(city);
+        const assessment = await assessRisk(city, lat, lon);
         res.json(assessment);
     } catch (err) {
         if (err.response && err.response.status === 404) {

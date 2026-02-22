@@ -62,7 +62,8 @@
         "getRealTime": "Get real-time weather-based disaster risk assessment",
         "usingEstimated": "Using estimated data — weather API unavailable",
         "riskAssessedFor": "Risk assessed for {{city}}",
-        "failedFetch": "Failed to fetch risk data. Please try again."
+        "failedFetch": "Failed to fetch risk data. Please try again.",
+        "autoScanning": "Auto-Scanning Location"
     },
     "login": {
         "welcomeBack": "Welcome Back",
@@ -147,7 +148,14 @@
         "zoomInForServices": "Zoom in to see emergency services",
         "noServicesNearby": "No services found in this area",
         "foundServices": "Found {{count}} services nearby",
-        "fetchError": "Failed to fetch services. Try again."
+        "fetchError": "Failed to fetch services. Try again.",
+        "scanAreaForHelp": "Scan Area for Help",
+        "detectedNearby": "Detected Nearby",
+        "hospitalsNearMe": "Hospitals Near Me",
+        "locateOnMap": "Locate on Map",
+        "contact": "Contact",
+        "kmAway": "KM AWAY",
+        "nearby": "NEARBY"
     },
     "userDashboard": {
         "welcome": "Welcome,",
@@ -220,7 +228,17 @@
         "sosResolveFailed": "Failed to resolve SOS",
         "complaintResolved": "Complaint resolved",
         "complaintResolveFailed": "Failed to resolve complaint",
-        "foodStatusUpdated": "Food status updated for {{name}}"
+        "foodStatusUpdated": "Food status updated for {{name}}",
+        "addResource": "Add New Resource",
+        "resourceName": "Resource Name",
+        "resourceType": "Resource Type",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "address": "Address",
+        "contact": "Contact",
+        "adding": "Adding...",
+        "resourceAdded": "Resource added successfully!",
+        "rescueCenter": "Rescue Center"
     },
     "chatbot": {
         "title": "Health & Disaster Bot",
