@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Disaster Preparedness & Community Health Dashboard",
   "scripts": {
-    "install:all": "cd server && npm install && cd ../client && npm install",
+    "install:all": "cd server && npm install && cd ../client && npm install --legacy-peer-deps",
     "build:client": "cd client && npm run build",
     "start": "cd server && node index.js",
     "build": "npm run install:all && npm run build:client",
