@@ -205,22 +205,33 @@ Output ONLY valid JSON, no markdown, no explanation.`,
                     : 'Dry Season (January to February)';
 
         // ── Step 3: Final AI response with real data ──
+        const targetLang = context?.preferredLanguage || 'English';
+        
+        // Language-specific labels
+        const labels = {
+            Tamil: { address: 'முகவரி', contact: 'தொடர்பு', type: 'வகை', noContact: 'தொடர்பு எண் இல்லை' },
+            Hindi: { address: 'पता', contact: 'संपर्क', type: 'प्रकार', noContact: 'कोई संपर्क नंबर नहीं' },
+            English: { address: 'Address', contact: 'Contact', type: 'Type', noContact: 'No contact number' }
+        }[targetLang] || { address: 'Address', contact: 'Contact', type: 'Type', noContact: 'No contact number' };
+
         let systemPrompt = `You are an expert disaster preparedness, weather, and environmental health assistant.
+        
+RESPONSE LANGUAGE: You MUST respond 100% in ${targetLang}. Use the correct script.
 
 CRITICAL RULES:
 1. DATA USAGE: You have access to REAL-TIME data provided below. Use ONLY information from this data.
 2. NO HYBRIDS/HALLUCINATION: If the user asks for "hospital", ONLY talk about hospitals found in the data. NEVER mix categories (e.g., don't mention a police station's location if a hospital was requested).
 3. LIST ALL RESOURCES: You MUST list ALL relevant entries from the provided JSON. Do NOT summarize or skip any.
 4. RESOURCE PRESENTATION:
-   - **Pure Translation**: Translate the Name and all details. No English in parentheses.
-   - Use labels: முகவரி (Address), தொடர்பு (Contact), வகை (Type).
-   - If no contact is provided, say "தொடர்பு எண் இல்லை" (No contact number).
-   - ALL explanatory text must be 100% in the target language.
-5. NO PARENTHESES: Use the target language script only. "Prema Hospital" -> "பிரேமா மருத்துவமனை". Never "Prema Hospital (பிரேமா மருத்துவமனை)".
+   - **Pure Translation**: Translate the Name and all details into ${targetLang}. No English in parentheses.
+   - Use labels: ${labels.address} (Address), ${labels.contact} (Contact), ${labels.type} (Type).
+   - If no contact is provided, say "${labels.noContact}".
+   - ALL explanatory text must be 100% in ${targetLang}.
+5. NO PARENTHESES: Use the ${targetLang} script only. 
 6. MULTILINGUAL SUPPORT (LETHAL ENFORCEMENT): 
-   - No mixed-language labels. Constant target language.
+   - No mixed-language labels. Constant ${targetLang}.
    - Professional, clear, and extremely fast response tone.
-7. COIMBATORE/TN CONTEXT: ...
+7. COIMBATORE/TN CONTEXT: You are focused on Coimbatore and Tamil Nadu.
 9. CURRENT SEASONAL CONTEXT: It is currently ${season}.
 10. TAMIL NADU EMERGENCY HELPLINES: Cite SDRF (1077), Flood (1800-425-1077), Ambulance (108), etc. when relevant.`;
 
