@@ -18,18 +18,16 @@ const Resource = {
   async findNearby(lat, lon, radiusMetres = 5000) {
     // Haversine approximation in SQL (no PostGIS needed)
     const { rows } = await db.query(
-      `SELECT *, 
-        (6371000 * acos(
-          cos(radians($1)) * cos(radians(lat)) *
-          cos(radians(lng) - radians($2)) +
-          sin(radians($1)) * sin(radians(lat))
-        )) AS distance
-       FROM resources
-       HAVING (6371000 * acos(
-          cos(radians($1)) * cos(radians(lat)) *
-          cos(radians(lng) - radians($2)) +
-          sin(radians($1)) * sin(radians(lat))
-        )) <= $3
+      `SELECT * FROM (
+        SELECT *, 
+          (6371000 * acos(
+            LEAST(1.0, cos(radians($1)) * cos(radians(lat)) *
+            cos(radians(lng) - radians($2)) +
+            sin(radians($1)) * sin(radians(lat)))
+          )) AS distance
+         FROM resources
+       ) sub
+       WHERE distance <= $3
        ORDER BY distance`,
       [lat, lon, radiusMetres]
     );

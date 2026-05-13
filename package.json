@@ -1,0 +1,15 @@
+{
+  "name": "disaster-preparedness",
+  "version": "1.0.0",
+  "description": "Disaster Preparedness & Community Health Dashboard",
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "build:client": "cd client && npm run build",
+    "start": "cd server && node index.js",
+    "build": "npm run install:all && npm run build:client",
+    "dev": "cd server && node index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

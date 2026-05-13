@@ -169,30 +169,25 @@ Output ONLY valid JSON, no markdown, no explanation.`,
                     if (geo) { rLat = geo.latitude; rLon = geo.longitude; }
                 }
 
-                let query = {};
+                let resources;
+                if (rLat !== null && rLon !== null) {
+                    resources = await Resource.findNearby(rLat, rLon, 500000);
+                } else {
+                    resources = await Resource.findAll();
+                }
+
                 // Filter by type if specified
                 if (intent.resource_type && intent.resource_type !== 'all') {
-                    query.type = intent.resource_type;
+                    resources = resources.filter(r => r.type === intent.resource_type);
                 }
 
-                // Only use geospatial query if we have valid coordinates
-                if (rLat !== null && rLon !== null) {
-                    query.location = {
-                        $near: {
-                            $geometry: { type: 'Point', coordinates: [rLon, rLat] },
-                            $maxDistance: 500000 // 500km — expanded since DB currently only has Mumbai seeds
-                        }
-                    };
-                }
-
-                const resources = await Resource.find(query).limit(10);
-                resourceData = resources.map(r => ({
+                resourceData = resources.slice(0, 10).map(r => ({
                     name: r.name,
                     type: r.type.replace('_', ' '),
                     address: r.address,
                     contact: r.contact,
                     distanceNote: (rLat !== null && rLon !== null) ? undefined : 'distance unknown (location not shared)',
-                    foodAvailable: r.type === 'food_point' ? r.status.foodAvailable : undefined
+                    foodAvailable: r.type === 'food_point' ? r.status?.foodAvailable : undefined
                 }));
             } catch (err) {
                 console.error('Resource fetch error:', err.message);

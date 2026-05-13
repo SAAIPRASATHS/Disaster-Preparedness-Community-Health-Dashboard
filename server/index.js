@@ -66,10 +66,27 @@ app.use('/api/airquality', airqualityRoutes);
 app.use('/api/pollen', pollenRoutes);
 app.use('/api/resources', resourceRoutes);
 
+// ── Serve React Frontend (Production) ──
+const path = require('path');
+const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
 
-// Health check
-app.get('/', (_req, res) => {
+// Serve static assets from the built React app
+app.use(express.static(clientDistPath));
+
+// Health check (only if no static file matched)
+app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', service: 'Disaster Preparedness API', database: 'neon-postgresql', websocket: true });
+});
+
+// SPA fallback — serve index.html for any non-API route
+app.get('*', (_req, res) => {
+    const indexPath = path.join(clientDistPath, 'index.html');
+    const fs = require('fs');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.json({ status: 'ok', service: 'Disaster Preparedness API', note: 'Client not built yet. Run npm run build.' });
+    }
 });
 
 // ── Database & Server ──

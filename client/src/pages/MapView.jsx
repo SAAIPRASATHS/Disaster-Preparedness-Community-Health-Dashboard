@@ -41,6 +41,7 @@ const RESOURCE_ICONS = {
     food_point: '🍱',
     hospital: '🏥',
     government_office: '🏛️',
+    water_body: '💧',
     rescue_center: '🆘'
 };
 
@@ -257,6 +258,7 @@ export default function MapView() {
         food: true,
         hospital: true,
         government: true,
+        water: true,
         rescue: true,
     });
 
@@ -268,8 +270,8 @@ export default function MapView() {
     const toast = useToast();
     const alertShownRef = useRef(new Set());
 
-    // Default center coordinates (Mumbai) used when geolocation is unavailable
-    const DEFAULT_CENTER = [19.076, 72.8777];
+    // Default center coordinates (Coimbatore) used when geolocation is unavailable
+    const DEFAULT_CENTER = [11.0168, 76.9558];
 
     useEffect(() => {
         async function load() {
@@ -537,8 +539,8 @@ export default function MapView() {
 
             <div className="relative rounded-[3rem] overflow-hidden border-4 border-white shadow-2xl shadow-slate-200/50 group transition-all duration-500" style={{ height: '600px' }}>
                 <MapContainer
-                    center={[20.5937, 78.9629]}
-                    zoom={5}
+                    center={[11.0168, 76.9558]}
+                    zoom={12}
                     className="h-full w-full"
                     style={{ background: '#F4F6FB' }}
                     ref={mapRef}
@@ -579,6 +581,7 @@ export default function MapView() {
                                 food_point: 'food',
                                 hospital: 'hospital',
                                 government_office: 'government',
+                                water_body: 'water',
                                 rescue_center: 'rescue'
                             };
                             const filterKey = typeMap[res.type];
