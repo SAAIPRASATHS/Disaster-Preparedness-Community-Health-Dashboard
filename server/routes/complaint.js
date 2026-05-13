@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
 // GET /api/complaint — list complaints (admin)
 router.get('/', async (req, res) => {
     try {
-        const complaints = await Complaint.find().sort({ createdAt: -1 }).limit(50);
+        const complaints = await Complaint.findAll(50);
         res.json(complaints);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch complaints' });
@@ -53,7 +53,7 @@ router.patch('/:id/status', async (req, res) => {
         if (!['pending', 'in-progress', 'resolved'].includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
         }
-        const complaint = await Complaint.findByIdAndUpdate(req.params.id, { status }, { new: true });
+        const complaint = await Complaint.updateStatus(req.params.id, status);
         if (!complaint) return res.status(404).json({ error: 'Complaint not found' });
 
         const io = req.app.get('io');
@@ -68,11 +68,7 @@ router.patch('/:id/status', async (req, res) => {
 // PUT /api/complaint/:id/resolve — shortcut to resolve a complaint
 router.put('/:id/resolve', async (req, res) => {
     try {
-        const complaint = await Complaint.findByIdAndUpdate(
-            req.params.id,
-            { status: 'resolved' },
-            { new: true }
-        );
+        const complaint = await Complaint.updateStatus(req.params.id, 'resolved');
         if (!complaint) return res.status(404).json({ error: 'Complaint not found' });
 
         const io = req.app.get('io');

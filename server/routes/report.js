@@ -36,9 +36,6 @@ router.post('/', async (req, res) => {
             report,
         });
     } catch (err) {
-        if (err.name === 'ValidationError') {
-            return res.status(400).json({ error: err.message });
-        }
         console.error('Report submission error:', err.message);
         res.status(500).json({ error: 'Failed to submit report' });
     }
@@ -47,7 +44,7 @@ router.post('/', async (req, res) => {
 // GET /api/report — list reports (admin)
 router.get('/', async (req, res) => {
     try {
-        const reports = await SymptomReport.find().sort({ createdAt: -1 }).limit(50);
+        const reports = await SymptomReport.findAll(50);
         res.json(reports);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch reports' });

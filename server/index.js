@@ -1,9 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const { Server } = require('socket.io');
+const db = require('./db');
 
 const { verifyToken, verifyAdmin } = require('./middleware/auth');
 
@@ -69,25 +69,26 @@ app.use('/api/resources', resourceRoutes);
 
 // Health check
 app.get('/', (_req, res) => {
-    res.json({ status: 'ok', service: 'Disaster Preparedness API', websocket: true });
+    res.json({ status: 'ok', service: 'Disaster Preparedness API', database: 'neon-postgresql', websocket: true });
 });
 
 // ── Database & Server ──
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
 
-if (!MONGO_URI) {
-    console.error('❌  MONGO_URI is not set in .env');
-    process.exit(1);
+async function start() {
+    try {
+        // Initialise PostgreSQL schema (creates tables if not exist)
+        await db.initDb();
+
+        // Quick connection test
+        const result = await db.query('SELECT NOW()');
+        console.log('✅ PostgreSQL connected at:', result.rows[0].now);
+
+        server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (with Socket.IO)`));
+    } catch (err) {
+        console.error('❌ Failed to start server:', err.message);
+        process.exit(1);
+    }
 }
 
-mongoose
-    .connect(MONGO_URI)
-    .then(() => {
-        console.log('✅  MongoDB connected');
-        server.listen(PORT, () => console.log(`🚀  Server running on port ${PORT} (with Socket.IO)`));
-    })
-    .catch((err) => {
-        console.error('❌  MongoDB connection failed:', err.message);
-        process.exit(1);
-    });
+start();

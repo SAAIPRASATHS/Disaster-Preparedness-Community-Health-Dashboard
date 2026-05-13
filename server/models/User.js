@@ -1,45 +1,38 @@
-const mongoose = require('mongoose');
+const db = require('../db');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true,
+const User = {
+  async create({ name, email, password, role = 'user', familyMembers = 1, elderly = 0, children = 0, conditions = [] }) {
+    const salt = await bcrypt.genSalt(10);
+    const hashed = await bcrypt.hash(password, salt);
+    const { rows } = await db.query(
+      `INSERT INTO users (name, email, password, role, family_members, elderly, children, conditions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [name, email.toLowerCase().trim(), hashed, role, familyMembers, elderly, children, conditions]
+    );
+    return User.sanitize(rows[0]);
   },
-  password: { type: String, required: true, minlength: 6 },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
-  familyMembers: { type: Number, default: 1, min: 1 },
-  elderly: { type: Number, default: 0, min: 0 },
-  children: { type: Number, default: 0, min: 0 },
-  conditions: {
-    type: [String],
-    enum: ['diabetes', 'asthma', 'heart_disease', 'hypertension', 'none'],
-    default: [],
+
+  async findByEmail(email) {
+    const { rows } = await db.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    return rows[0] || null;
   },
-}, { timestamps: true });
 
-// Hash password before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
+  async findById(id) {
+    const { rows } = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    return rows[0] || null;
+  },
 
-// Compare password method
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+  async comparePassword(plainText, hashed) {
+    return bcrypt.compare(plainText, hashed);
+  },
+
+  /** Strip password from user object before returning to client */
+  sanitize(user) {
+    if (!user) return null;
+    const { password, ...safe } = user;
+    return safe;
+  },
 };
 
-// Never return password in JSON
-userSchema.methods.toJSON = function () {
-  const obj = this.toObject();
-  delete obj.password;
-  return obj;
-};
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

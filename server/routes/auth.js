@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 function generateToken(user) {
     return jwt.sign(
-        { id: user._id, email: user.email, role: user.role },
+        { id: user.id, email: user.email, role: user.role, name: user.name },
         JWT_SECRET,
         { expiresIn: '7d' }
     );
@@ -22,7 +22,7 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'name, email, and password are required' });
         }
 
-        const existing = await User.findOne({ email: email.toLowerCase() });
+        const existing = await User.findByEmail(email);
         if (existing) {
             return res.status(409).json({ error: 'An account with this email already exists' });
         }
@@ -41,9 +41,6 @@ router.post('/register', async (req, res) => {
         const token = generateToken(user);
         res.status(201).json({ token, user });
     } catch (err) {
-        if (err.code === 11000) {
-            return res.status(409).json({ error: 'An account with this email already exists' });
-        }
         console.error('❌ Registration error detail:', {
             message: err.message,
             stack: err.stack,
@@ -62,18 +59,19 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'email and password are required' });
         }
 
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const user = await User.findByEmail(email);
         if (!user) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        const isMatch = await user.comparePassword(password);
+        const isMatch = await User.comparePassword(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        const token = generateToken(user);
-        res.json({ token, user });
+        const safeUser = User.sanitize(user);
+        const token = generateToken(safeUser);
+        res.json({ token, user: safeUser });
     } catch (err) {
         console.error('Login error:', err.message);
         res.status(500).json({ error: 'Login failed' });
@@ -89,12 +87,12 @@ router.post('/admin-login', async (req, res) => {
             return res.status(400).json({ error: 'email and password are required' });
         }
 
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const user = await User.findByEmail(email);
         if (!user) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        const isMatch = await user.comparePassword(password);
+        const isMatch = await User.comparePassword(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
@@ -103,8 +101,9 @@ router.post('/admin-login', async (req, res) => {
             return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
         }
 
-        const token = generateToken(user);
-        res.json({ token, user });
+        const safeUser = User.sanitize(user);
+        const token = generateToken(safeUser);
+        res.json({ token, user: safeUser });
     } catch (err) {
         console.error('Admin login error:', err.message);
         res.status(500).json({ error: 'Admin login failed' });

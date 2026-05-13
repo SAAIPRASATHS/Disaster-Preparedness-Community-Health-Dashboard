@@ -23,7 +23,7 @@ router.post('/', async (req, res) => {
 // GET /api/live-alert — fetch recent alerts
 router.get('/', async (req, res) => {
     try {
-        const alerts = await LiveAlert.find().sort({ createdAt: -1 }).limit(50);
+        const alerts = await LiveAlert.findAll(50);
         res.json(alerts);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch alerts' });

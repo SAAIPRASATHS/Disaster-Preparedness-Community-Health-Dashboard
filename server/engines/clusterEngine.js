@@ -46,29 +46,8 @@ const OUTBREAK_RULES = [
 async function detectClusters() {
     const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
 
-    // Aggregate reports by location
-    const pipeline = [
-        { $match: { createdAt: { $gte: twelveHoursAgo } } },
-        { $unwind: '$symptoms' },
-        {
-            $group: {
-                _id: { location: '$location', symptom: '$symptoms' },
-                count: { $sum: 1 },
-            },
-        },
-        {
-            $group: {
-                _id: '$_id.location',
-                symptoms: {
-                    $push: { symptom: '$_id.symptom', count: '$count' },
-                },
-                totalReports: { $sum: '$count' },
-            },
-        },
-        { $sort: { totalReports: -1 } },
-    ];
-
-    const locationData = await SymptomReport.aggregate(pipeline);
+    // Use the PostgreSQL aggregation method
+    const locationData = await SymptomReport.aggregateByLocation(twelveHoursAgo);
 
     const clusters = [];
 
@@ -93,9 +72,7 @@ async function detectClusters() {
         }
     }
 
-    const totalGlobalReports = await SymptomReport.countDocuments({
-        createdAt: { $gte: twelveHoursAgo }
-    });
+    const totalGlobalReports = await SymptomReport.countSince(twelveHoursAgo);
 
     return {
         analysedAt: new Date().toISOString(),

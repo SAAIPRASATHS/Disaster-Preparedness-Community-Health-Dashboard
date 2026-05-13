@@ -41,11 +41,7 @@ router.post('/', async (req, res) => {
         }
 
         // Proactive: check for multiple SOS in same area
-        const recentSOS = await SOSAlert.countDocuments({
-            'location.address': location.address || '',
-            timestamp: { $gte: new Date(Date.now() - 60 * 60 * 1000) },
-            resolved: false,
-        });
+        const recentSOS = await SOSAlert.countRecentByAddress(location.address || '', 1);
         if (recentSOS >= 3 && io) {
             io.emit('area-critical', {
                 area: location.address || 'Unknown',
@@ -64,7 +60,7 @@ router.post('/', async (req, res) => {
 // GET /api/sos — list SOS alerts (admin)
 router.get('/', async (req, res) => {
     try {
-        const alerts = await SOSAlert.find().sort({ timestamp: -1 }).limit(50);
+        const alerts = await SOSAlert.findAll(50);
         res.json(alerts);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch SOS alerts' });
@@ -74,7 +70,7 @@ router.get('/', async (req, res) => {
 // PATCH /api/sos/:id/resolve — resolve SOS
 router.patch('/:id/resolve', async (req, res) => {
     try {
-        const alert = await SOSAlert.findByIdAndUpdate(req.params.id, { resolved: true }, { new: true });
+        const alert = await SOSAlert.resolve(req.params.id);
         if (!alert) return res.status(404).json({ error: 'SOS alert not found' });
 
         const io = req.app.get('io');

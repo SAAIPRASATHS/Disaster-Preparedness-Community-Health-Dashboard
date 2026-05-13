@@ -1,0 +1,75 @@
+CREATE TABLE IF NOT EXISTS users (
+  id          SERIAL PRIMARY KEY,
+  name        VARCHAR(255) NOT NULL,
+  email       VARCHAR(255) UNIQUE NOT NULL,
+  password    VARCHAR(255) NOT NULL,
+  role        VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  family_members INTEGER DEFAULT 1,
+  elderly     INTEGER DEFAULT 0,
+  children    INTEGER DEFAULT 0,
+  conditions  TEXT[] DEFAULT '{}',
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sos_alerts (
+  id          SERIAL PRIMARY KEY,
+  user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  user_name   VARCHAR(255) DEFAULT 'Anonymous',
+  lat         NUMERIC(10,7) NOT NULL,
+  lng         NUMERIC(10,7) NOT NULL,
+  address     TEXT DEFAULT '',
+  message     TEXT DEFAULT 'Emergency SOS',
+  resolved    BOOLEAN DEFAULT FALSE,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS symptom_reports (
+  id          SERIAL PRIMARY KEY,
+  user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  user_name   VARCHAR(255) DEFAULT 'Citizen',
+  location    VARCHAR(255) NOT NULL,
+  symptoms    TEXT[] NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS complaints (
+  id          SERIAL PRIMARY KEY,
+  user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  user_name   VARCHAR(255) DEFAULT 'Anonymous',
+  location    TEXT NOT NULL,
+  description TEXT NOT NULL,
+  status      VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'in-progress', 'resolved')),
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS live_alerts (
+  id          SERIAL PRIMARY KEY,
+  type        VARCHAR(50) NOT NULL CHECK (type IN ('disaster', 'health', 'sos', 'geofence', 'proactive')),
+  message     TEXT NOT NULL,
+  severity    VARCHAR(20) DEFAULT 'MEDIUM' CHECK (severity IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
+  area        TEXT NOT NULL,
+  source      VARCHAR(255) DEFAULT 'system',
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS resources (
+  id              SERIAL PRIMARY KEY,
+  name            VARCHAR(255) NOT NULL,
+  type            VARCHAR(50) NOT NULL CHECK (type IN ('fire_station','police_station','hotel','food_point','hospital','government_office','water_body','rescue_center')),
+  lat             NUMERIC(10,7) NOT NULL,
+  lng             NUMERIC(10,7) NOT NULL,
+  address         TEXT,
+  contact         TEXT,
+  food_available  BOOLEAN DEFAULT TRUE,
+  last_updated    TIMESTAMPTZ DEFAULT NOW(),
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_symptom_reports_created ON symptom_reports(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_sos_alerts_created ON sos_alerts(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_sos_alerts_address ON sos_alerts(address);
+
+CREATE INDEX IF NOT EXISTS idx_resources_lat_lng ON resources(lat, lng);
