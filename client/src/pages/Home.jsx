@@ -99,7 +99,7 @@ export default function Home() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.6 }}
                 >
-                    <h1 className="text-6xl md:text-7xl font-black text-slate-900 mb-6 tracking-tight leading-[1.1]">
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 mb-6 tracking-tight leading-[1.1]">
                         {t('home.title1')} <br />
                         <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent">
                             {t('home.title2')}
@@ -148,20 +148,20 @@ export default function Home() {
                             </motion.div>
                         </div>
                     )}
-                    <div className="flex gap-4 p-2 glass-card rounded-[2.5rem] shadow-2xl transition-all duration-500 group-focus-within:ring-4 group-focus-within:ring-primary/5">
+                    <div className="flex flex-col sm:flex-row gap-3 p-2 glass-card rounded-[2rem] md:rounded-[2.5rem] shadow-2xl transition-all duration-500 group-focus-within:ring-4 group-focus-within:ring-primary/5">
                         <input
                             id="city-input"
                             type="text"
                             value={city}
                             onChange={(e) => setCity(e.target.value)}
                             placeholder={t('home.placeholder')}
-                            className="flex-1 bg-transparent border-none px-6 py-4 text-dark placeholder-slate-400 focus:outline-none text-lg font-medium"
+                            className="flex-1 bg-transparent border-none px-4 py-3 md:px-6 md:py-4 text-dark placeholder-slate-400 focus:outline-none text-base md:text-lg font-medium text-center sm:text-left"
                         />
                         <button
                             id="check-risk-btn"
                             type="submit"
                             disabled={loading}
-                            className="premium-button text-white px-8 py-4 rounded-[2rem] flex items-center gap-3 active:scale-95 transition-transform"
+                            className="premium-button text-white px-6 py-3 md:px-8 md:py-4 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center gap-3 active:scale-95 transition-transform w-full sm:w-auto"
                         >
                             {loading ? (
                                 <>
@@ -180,7 +180,7 @@ export default function Home() {
             </motion.div>
 
             {/* Family Profile - Refined Glassmorphism */}
-            <AnimatedCard delay={0.4} className="max-w-2xl mx-auto mb-12 glass-card p-8 rounded-[2.5rem]">
+            <AnimatedCard delay={0.4} className="max-w-2xl mx-auto mb-12 glass-card p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem]">
                 <div className="flex items-center gap-4 mb-8">
                     <div className="p-3 bg-primary/10 rounded-2xl">
                         <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>

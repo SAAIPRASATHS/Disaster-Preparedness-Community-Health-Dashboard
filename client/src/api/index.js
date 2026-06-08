@@ -49,7 +49,15 @@ export const fetchSOSAlerts = () => API.get('/sos');
 export const resolveSOSAlert = (id) => API.patch(`/sos/${id}/resolve`);
 
 // Complaint API
-export const submitComplaint = (data) => API.post('/complaint', data);
+export const submitComplaint = ({ location, description, imageFile }) => {
+    const formData = new FormData();
+    formData.append('location', location);
+    formData.append('description', description);
+    if (imageFile) formData.append('image', imageFile);
+    return API.post('/complaint', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+};
 export const fetchComplaints = () => API.get('/complaint');
 export const updateComplaintStatus = (id, status) => API.patch(`/complaint/${id}/status`, { status });
 export const resolveComplaint = (id) => API.put(`/complaint/${id}/resolve`);

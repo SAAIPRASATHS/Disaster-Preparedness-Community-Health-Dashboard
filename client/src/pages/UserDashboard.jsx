@@ -35,14 +35,16 @@ export default function UserDashboard() {
     const [complaintDesc, setComplaintDesc] = useState('');
     const [complaintLocation, setComplaintLocation] = useState('');
     const [complaintLoading, setComplaintLoading] = useState(false);
+    const [complaintImage, setComplaintImage] = useState(null);       // File object
+    const [complaintImagePreview, setComplaintImagePreview] = useState(null); // object URL
 
     // ── TN DMP: Seasonal hazard banner ──
     const getSeason = () => {
         const m = new Date().getMonth() + 1;
-        if (m >= 6 && m <= 9) return { label: '🌧️ Southwest Monsoon Active', sub: 'Flood risk elevated (June–September). Stay prepared.', color: 'bg-blue-50 border-blue-300 text-blue-800' };
-        if (m >= 10 && m <= 12) return { label: '🌀 Cyclone Season Active', sub: 'Northeast Monsoon active (Oct–Dec). Monitor coastal alerts.', color: 'bg-violet-50 border-violet-300 text-violet-800' };
-        if (m >= 3 && m <= 5) return { label: '🌡️ Pre-Monsoon Heat Season', sub: 'Heatwave risk (March–May). Stay hydrated, avoid midday sun.', color: 'bg-orange-50 border-orange-300 text-orange-800' };
-        return { label: '☀️ Dry Season', sub: 'No active seasonal hazard. Maintain your emergency kit.', color: 'bg-emerald-50 border-emerald-300 text-emerald-800' };
+        if (m >= 6 && m <= 9) return { label: t('userDashboard.southwestMonsoon'), sub: t('userDashboard.southwestMonsoonDesc'), color: 'bg-blue-50 border-blue-300 text-blue-800' };
+        if (m >= 10 && m <= 12) return { label: t('userDashboard.cycloneSeason'), sub: t('userDashboard.cycloneSeasonDesc'), color: 'bg-violet-50 border-violet-300 text-violet-800' };
+        if (m >= 3 && m <= 5) return { label: t('userDashboard.heatSeason'), sub: t('userDashboard.heatSeasonDesc'), color: 'bg-orange-50 border-orange-300 text-orange-800' };
+        return { label: t('userDashboard.drySeason'), sub: t('userDashboard.drySeasonDesc'), color: 'bg-emerald-50 border-emerald-300 text-emerald-800' };
     };
     const [showSeasonBanner, setShowSeasonBanner] = useState(true);
     const season = getSeason();
@@ -138,16 +140,37 @@ export default function UserDashboard() {
         if (!complaintDesc.trim() || !complaintLocation.trim()) return;
         setComplaintLoading(true);
         try {
-            await submitComplaint({ location: complaintLocation, description: complaintDesc });
+            await submitComplaint({
+                location: complaintLocation,
+                description: complaintDesc,
+                imageFile: complaintImage || undefined,
+            });
             toast.success(t('userDashboard.complaintSubmitted'));
             setShowComplaint(false);
             setComplaintDesc('');
             setComplaintLocation('');
+            if (complaintImagePreview) URL.revokeObjectURL(complaintImagePreview);
+            setComplaintImage(null);
+            setComplaintImagePreview(null);
         } catch {
             toast.error(t('userDashboard.complaintFailed'));
         } finally {
             setComplaintLoading(false);
         }
+    };
+
+    // Image picker helper
+    const handleImageChange = (file) => {
+        if (!file) return;
+        if (complaintImagePreview) URL.revokeObjectURL(complaintImagePreview);
+        setComplaintImage(file);
+        setComplaintImagePreview(URL.createObjectURL(file));
+    };
+
+    const clearImage = () => {
+        if (complaintImagePreview) URL.revokeObjectURL(complaintImagePreview);
+        setComplaintImage(null);
+        setComplaintImagePreview(null);
     };
 
     const familySize = user?.familyMembers || 4;
@@ -177,7 +200,7 @@ export default function UserDashboard() {
                 <motion.h1
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-4xl font-black text-slate-900 mb-2 tracking-tight"
+                    className="text-3xl md:text-4xl font-black text-slate-900 mb-2 tracking-tight"
                 >
                     {t('userDashboard.welcome')} <span className="bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">{user?.name || 'Citizen'}</span>
                 </motion.h1>
@@ -233,7 +256,7 @@ export default function UserDashboard() {
             </AnimatePresence>
 
             {/* Quick Actions - Unified glass grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-12">
                 {[
                     { icon: '🌡️', label: t('userDashboard.reportSymptoms'), action: () => navigate('/report'), color: '#EF4444' },
                     { icon: '🗺️', label: t('userDashboard.viewMap'), action: () => navigate('/map'), color: '#10B981' },
@@ -242,7 +265,7 @@ export default function UserDashboard() {
                 ].map((btn, i) => (
                     <AnimatedCard key={i} delay={i * 0.05}>
                         <button onClick={btn.action}
-                            className="w-full glass-card p-8 text-left group relative overflow-hidden transition-all active:scale-95">
+                            className="w-full glass-card p-5 md:p-8 text-left group relative overflow-hidden transition-all active:scale-95">
                             <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl -mr-12 -mt-12 transition-colors group-hover:bg-opacity-20" style={{ backgroundColor: `${btn.color}11` }} />
                             <div className="p-4 bg-white rounded-2xl shadow-sm mb-4 w-fit group-hover:scale-110 transition-transform duration-500" style={{ boxShadow: `0 10px 15px -3px ${btn.color}22` }}>
                                 <span className="text-2xl">{btn.icon}</span>
@@ -254,16 +277,16 @@ export default function UserDashboard() {
             </div>
 
             {/* SOS + Emergency Section - Premium Control Tray */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                <AnimatedCard className="lg:col-span-2 glass-card p-10 border-rose-500/10 shadow-2xl shadow-rose-500/5 relative overflow-hidden group">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-12">
+                <AnimatedCard className="lg:col-span-2 glass-card p-6 md:p-10 border-rose-500/10 shadow-2xl shadow-rose-500/5 relative overflow-hidden group">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-transparent opacity-20" />
 
                     <div className="flex flex-col md:flex-row gap-10 items-center">
                         <div className="flex-1 text-center md:text-left">
                             <h3 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em] mb-3">{t('userDashboard.emergencyResponse')}</h3>
-                            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tighter">Instant Support</h2>
+                            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tighter">{t('userDashboard.instantSupport')}</h2>
                             <p className="text-slate-500 text-sm font-medium leading-relaxed max-w-xs mx-auto md:mx-0">
-                                Trigger immediate assistance or mark yourself as safe during an active crisis.
+                                {t('userDashboard.instantSupportDesc')}
                             </p>
                         </div>
 
@@ -271,7 +294,7 @@ export default function UserDashboard() {
                             <button
                                 onClick={handleSOS}
                                 disabled={sosLoading || sosSent}
-                                className={`w-full py-6 rounded-3xl font-black text-xl transition-all shadow-2xl relative overflow-hidden ${sosSent
+                                className={`w-full py-4 md:py-6 rounded-2xl md:rounded-3xl font-black text-lg md:text-xl transition-all shadow-2xl relative overflow-hidden ${sosSent
                                     ? 'bg-slate-900 text-white'
                                     : 'bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-rose-500/30 active:scale-95 sos-pulse'
                                     }`}
@@ -279,9 +302,9 @@ export default function UserDashboard() {
                                 {sosLoading ? (
                                     <div className="flex items-center justify-center gap-3">
                                         <div className="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full" />
-                                        <span>SIGNALLING...</span>
+                                        <span>{t('userDashboard.signalling')}</span>
                                     </div>
-                                ) : sosSent ? 'HELP IS COMING' : 'TRIGGER SOS'}
+                                ) : sosSent ? t('userDashboard.helpIsComing') : t('userDashboard.triggerSos')}
                             </button>
 
                             <div className="flex gap-4">
@@ -301,61 +324,30 @@ export default function UserDashboard() {
                         </div>
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <button
-                            onClick={() => setShowComplaint(!showComplaint)}
-                            className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-blue-700"
+                            onClick={() => navigate('/file-complaint')}
+                            className="flex items-center justify-center gap-3 w-full sm:w-auto px-6 md:px-10 py-4 md:py-5 rounded-2xl text-white text-lg md:text-xl font-black tracking-wide transition-all duration-200 hover:-translate-y-1 active:scale-95"
+                            style={{
+                                background: 'linear-gradient(135deg, var(--primary) 0%, #6366f1 100%)',
+                                boxShadow: '0 8px 25px rgba(79,70,229,0.45)',
+                            }}
                         >
-                            {showComplaint ? t('common.cancel') : t('userDashboard.fileComplaint')}
+                            <svg className="w-7 h-7 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            {t('userDashboard.fileComplaint')}
                         </button>
                         <div className="flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Response Team Online</span>
+                            <span className="text-xs font-semibold text-slate-400">{t('userDashboard.responseTeamOnline')}</span>
                         </div>
                     </div>
-
-                    <AnimatePresence>
-                        {showComplaint && (
-                            <motion.form
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                onSubmit={handleComplaint}
-                                className="mt-6 space-y-4"
-                            >
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <input
-                                        type="text"
-                                        placeholder={t('userDashboard.complaintLocationPlaceholder')}
-                                        value={complaintLocation}
-                                        onChange={(e) => setComplaintLocation(e.target.value)}
-                                        required
-                                        className="premium-input text-xs"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={complaintLoading}
-                                        className="premium-button text-[10px] py-4"
-                                    >
-                                        {complaintLoading ? 'SUBMITTING...' : t('userDashboard.submitComplaint')}
-                                    </button>
-                                </div>
-                                <textarea
-                                    placeholder={t('userDashboard.complaintDescPlaceholder')}
-                                    value={complaintDesc}
-                                    onChange={(e) => setComplaintDesc(e.target.value)}
-                                    required
-                                    rows={2}
-                                    className="premium-input text-xs resize-none"
-                                />
-                            </motion.form>
-                        )}
-                    </AnimatePresence>
                 </AnimatedCard>
 
                 {/* Preparedness Score - Refined UI */}
-                <AnimatedCard className="glass-card p-10 flex flex-col justify-center items-center text-center group">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Readiness Score</h3>
+                <AnimatedCard className="glass-card p-6 md:p-10 flex flex-col justify-center items-center text-center group">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">{t('userDashboard.readinessScore')}</h3>
                     <div className="relative w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-500">
                         <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                             <circle cx="18" cy="18" r="16" fill="none" stroke="#f1f5f9" strokeWidth="3" />
@@ -371,10 +363,10 @@ export default function UserDashboard() {
                         </div>
                     </div>
                     <p className="text-sm font-black text-slate-900 mb-2 uppercase tracking-wide">
-                        {prepScore >= 70 ? 'Resilient' : prepScore >= 40 ? 'Vulnerable' : 'At Risk'}
+                        {prepScore >= 70 ? t('userDashboard.resilient') : prepScore >= 40 ? t('userDashboard.vulnerable') : t('userDashboard.atRisk')}
                     </p>
                     <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-widest">
-                        Refine your kit to increase resilience
+                        {t('userDashboard.refineKit')}
                     </p>
                 </AnimatedCard>
             </div>
@@ -384,7 +376,7 @@ export default function UserDashboard() {
                 <div className="space-y-6">
                     <div className="flex items-center justify-between px-2">
                         <h3 className="text-xl font-black text-slate-900 tracking-tight">{t('userDashboard.currentRiskOverview')}</h3>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Updates</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('userDashboard.liveUpdates')}</span>
                     </div>
                     {loading ? <div className="space-y-4"><CardSkeleton /><CardSkeleton /></div> : riskData ? (
                         <div className="space-y-6">
@@ -409,7 +401,7 @@ export default function UserDashboard() {
                                                     <span className="text-sm font-black text-slate-700 tracking-tight">{r.disasterType}</span>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase">{r.trend === 'increasing' ? 'Tide Up ✓' : 'Stable'}</span>
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase">{r.trend === 'increasing' ? t('userDashboard.tideUp') : t('userDashboard.stable')}</span>
                                                     <span className={`text-[10px] px-3 py-1 rounded-full font-black tracking-widest uppercase ${r.projectedRisk === 'HIGH' ? 'bg-rose-50 text-rose-500' :
                                                         r.projectedRisk === 'MEDIUM' ? 'bg-amber-50 text-amber-600' :
                                                             'bg-emerald-50 text-emerald-600'
@@ -432,16 +424,16 @@ export default function UserDashboard() {
                 </div>
 
                 {/* Kit & Alerts Tray */}
-                <div className="space-y-10">
+                <div className="space-y-8 md:space-y-10">
                     <div className="glass-card overflow-hidden">
-                        <div className="p-8 border-b border-slate-100 bg-slate-50/30">
+                        <div className="p-5 md:p-8 border-b border-slate-100 bg-slate-50/30">
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="text-xl font-black text-slate-900 tracking-tight">{t('userDashboard.emergencyKit')}</h3>
                                 <div className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg">Level {familySize}</div>
                             </div>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Calculated for your household</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{t('userDashboard.calculatedForHousehold')}</p>
                         </div>
-                        <div className="p-8">
+                        <div className="p-5 md:p-8">
                             <ul className="space-y-3">
                                 {kit.map((item, i) => (
                                     <li key={i}
@@ -460,7 +452,7 @@ export default function UserDashboard() {
                                 ))}
                             </ul>
                             <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-between">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{checkedCount}/{kit.length} COMPLETED</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{checkedCount}/{kit.length} {t('userDashboard.completed')}</span>
                                 <div className="w-48 h-2 bg-slate-100 rounded-full overflow-hidden">
                                     <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${(checkedCount / kit.length) * 100}%` }} />
                                 </div>
@@ -469,27 +461,27 @@ export default function UserDashboard() {
                     </div>
 
                     {/* Mock Drill - Premium Alert Style */}
-                    <div className={`glass-card p-10 border-2 overflow-hidden relative group ${drillDue ? 'border-amber-500/20 shadow-amber-500/5' : 'border-emerald-500/20 shadow-emerald-500/5'}`}>
+                    <div className={`glass-card p-6 md:p-10 border-2 overflow-hidden relative group ${drillDue ? 'border-amber-500/20 shadow-amber-500/5' : 'border-emerald-500/20 shadow-emerald-500/5'}`}>
                         <div className={`absolute top-0 right-0 w-4 h-full opacity-20 ${drillDue ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">DRILL PROTOCOL</h3>
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">{t('userDashboard.drillProtocol')}</h3>
                         <p className="text-lg font-black text-slate-900 leading-snug tracking-tight mb-4">
-                            {daysSinceDrill === null ? 'Protocol hasn\'t been tested yet.' :
-                                drillDue ? `Protocol expires in ${daysSinceDrill} days. Refresh now.` :
-                                    `Next protocol check in ${30 - daysSinceDrill} days.`}
+                            {daysSinceDrill === null ? t('userDashboard.drillNotTested') :
+                                drillDue ? t('userDashboard.drillExpires', { days: daysSinceDrill }) :
+                                    t('userDashboard.drillNextCheck', { days: 30 - daysSinceDrill })}
                         </p>
                         <p className="text-xs text-slate-500 font-medium mb-8 leading-relaxed">
-                            Practising evacuation routes is critical for family safety.
+                            {t('userDashboard.drillPractising')}
                         </p>
                         <button
                             onClick={markDrillDone}
                             className={`premium-button w-full shadow-none ${drillDue ? 'bg-amber-500 shadow-amber-500/20' : 'bg-emerald-500 shadow-emerald-500/20'}`}>
-                            {drillDue ? 'RUN DRILL NOW' : 'REFRESH PROTOCOL'}
+                            {drillDue ? t('userDashboard.runDrillNow') : t('userDashboard.refreshProtocol')}
                         </button>
                     </div>
 
                     {/* Recent Alerts List */}
-                    <div className="glass-card p-8">
-                        <div className="flex items-center justify-between mb-8">
+                    <div className="glass-card p-5 md:p-8">
+                        <div className="flex items-center justify-between mb-6 md:mb-8">
                             <h3 className="text-lg font-black text-slate-900 tracking-tight">{t('userDashboard.recentAlerts')}</h3>
                             <Link to="/alerts" className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">{t('userDashboard.viewAllAlerts')}</Link>
                         </div>

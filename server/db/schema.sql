@@ -39,9 +39,13 @@ CREATE TABLE IF NOT EXISTS complaints (
   user_name   VARCHAR(255) DEFAULT 'Anonymous',
   location    TEXT NOT NULL,
   description TEXT NOT NULL,
+  image_url   TEXT DEFAULT NULL,
   status      VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'in-progress', 'resolved')),
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add image_url to existing complaints table if column doesn't exist yet
+ALTER TABLE complaints ADD COLUMN IF NOT EXISTS image_url TEXT DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS live_alerts (
   id          SERIAL PRIMARY KEY,

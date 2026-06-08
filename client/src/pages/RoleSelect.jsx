@@ -51,7 +51,7 @@ export default function RoleSelect() {
                 <div className="inline-block p-4 bg-white rounded-3xl shadow-xl shadow-slate-200/50 mb-8 transform hover:rotate-6 transition-transform cursor-default">
                     <span className="text-5xl block">🛡️</span>
                 </div>
-                <h1 className="text-5xl md:text-6xl font-black text-slate-900 mb-4 tracking-tighter">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 mb-4 tracking-tighter">
                     {t('roleSelect.title1')} <span className="bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">{t('roleSelect.title2')}</span>
                 </h1>
                 <p className="text-slate-500 font-medium max-w-lg mx-auto leading-relaxed">
@@ -67,7 +67,7 @@ export default function RoleSelect() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.7, delay: 0.2 + i * 0.15 }}
                         onClick={() => navigate(role.path)}
-                        className="glass-card p-10 text-left group relative overflow-hidden active:scale-[0.98]"
+                        className="glass-card p-6 md:p-10 text-left group relative overflow-hidden active:scale-[0.98]"
                     >
                         <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-all group-hover:opacity-40 opacity-20 bg-gradient-to-br ${role.gradient}`} />
 

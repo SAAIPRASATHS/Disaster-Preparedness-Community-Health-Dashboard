@@ -1,11 +1,11 @@
 const db = require('../db');
 
 const Complaint = {
-  async create({ userId, userName = 'Anonymous', location, description }) {
+  async create({ userId, userName = 'Anonymous', location, description, imageUrl = null }) {
     const { rows } = await db.query(
-      `INSERT INTO complaints (user_id, user_name, location, description)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [userId, userName, location, description]
+      `INSERT INTO complaints (user_id, user_name, location, description, image_url)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [userId, userName, location, description, imageUrl]
     );
     return Complaint.format(rows[0]);
   },
@@ -30,6 +30,7 @@ const Complaint = {
       userName: row.user_name,
       location: row.location,
       description: row.description,
+      imageUrl: row.image_url || null,
       status: row.status,
       createdAt: row.created_at,
     };

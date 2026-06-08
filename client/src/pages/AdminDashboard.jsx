@@ -62,6 +62,9 @@ export default function AdminDashboard() {
     const [criticalAreas, setCriticalAreas] = useState([]);
     const [symptomReports, setSymptomReports] = useState([]);
 
+    const [districtFilter, setDistrictFilter] = useState('');
+    const [sortByLocation, setSortByLocation] = useState(false);
+
     const addNotification = useCallback((notif) => {
         const entry = { ...notif, id: Date.now() + Math.random(), time: new Date() };
         setNotifications((prev) => [entry, ...prev].slice(0, 30));
@@ -233,6 +236,42 @@ export default function AdminDashboard() {
     const pendingComplaints = useMemo(() => complaints.filter((c) => c.status === 'pending').length, [complaints]);
     const resolvedComplaints = useMemo(() => complaints.filter((c) => c.status === 'resolved').length, [complaints]);
 
+    const processedSOS = useMemo(() => {
+        let result = [...sosAlerts];
+        if (districtFilter) {
+            const filterLower = districtFilter.toLowerCase();
+            result = result.filter(a => (a.location?.address || '').toLowerCase().includes(filterLower));
+        }
+        if (sortByLocation) {
+            result.sort((a, b) => (a.location?.address || '').localeCompare(b.location?.address || ''));
+        }
+        return result;
+    }, [sosAlerts, districtFilter, sortByLocation]);
+
+    const processedComplaints = useMemo(() => {
+        let result = [...complaints];
+        if (districtFilter) {
+            const filterLower = districtFilter.toLowerCase();
+            result = result.filter(c => (c.location || '').toLowerCase().includes(filterLower));
+        }
+        if (sortByLocation) {
+            result.sort((a, b) => (a.location || '').localeCompare(b.location || ''));
+        }
+        return result;
+    }, [complaints, districtFilter, sortByLocation]);
+
+    const processedReports = useMemo(() => {
+        let result = [...symptomReports];
+        if (districtFilter) {
+            const filterLower = districtFilter.toLowerCase();
+            result = result.filter(r => (r.location || '').toLowerCase().includes(filterLower));
+        }
+        if (sortByLocation) {
+            result.sort((a, b) => (a.location || '').localeCompare(b.location || ''));
+        }
+        return result;
+    }, [symptomReports, districtFilter, sortByLocation]);
+
     const stats = useMemo(() => [
         { value: clusters?.clustersDetected || 0, label: t('adminDashboard.activeAlerts'), color: 'text-rose-600', icon: '🚨', bg: 'bg-rose-50' },
         { value: activeSOS, label: t('adminDashboard.activeSOS'), color: 'text-amber-600', icon: '🆘', bg: 'bg-amber-50' },
@@ -277,10 +316,10 @@ export default function AdminDashboard() {
                 <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-[80px] -z-10" />
 
                 <div className="text-center mb-12 relative z-10">
-                    <div className="inline-block p-4 bg-white rounded-3xl shadow-xl shadow-slate-200/50 mb-8 border border-slate-100">
-                        <span className="text-4xl block">🛡️</span>
+                    <div className="inline-block p-3 md:p-4 bg-white rounded-3xl shadow-xl shadow-slate-200/50 mb-6 md:mb-8 border border-slate-100">
+                        <span className="text-3xl md:text-4xl block">🛡️</span>
                     </div>
-                    <h1 className="text-4xl font-black text-slate-900 mb-3 tracking-tighter uppercase">
+                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-3 tracking-tighter uppercase">
                         {t('adminDashboard.title1')} <span className="bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent">{t('adminDashboard.title2')}</span>
                     </h1>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">{t('adminDashboard.subtitle')}</p>
@@ -314,10 +353,10 @@ export default function AdminDashboard() {
                 </AnimatePresence>
 
                 {/* Stats row — pure CSS, no framer-motion */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-12">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-6 mb-12">
                     {stats.map((stat, i) => (
-                        <Card key={i} className="glass-card p-6 flex flex-col items-center text-center shadow-lg hover:scale-[1.02] transition-transform">
-                            <div className={`w-12 h-12 ${stat.bg} rounded-2xl flex items-center justify-center text-2xl mb-4 shadow-inner ring-4 ring-white`}>
+                        <Card key={i} className="glass-card p-4 md:p-6 flex flex-col items-center text-center shadow-lg hover:scale-[1.02] transition-transform">
+                            <div className={`w-10 h-10 md:w-12 md:h-12 ${stat.bg} rounded-xl md:rounded-2xl flex items-center justify-center text-xl md:text-2xl mb-3 md:mb-4 shadow-inner ring-2 md:ring-4 ring-white`}>
                                 {stat.icon}
                             </div>
                             <p className={`text-3xl font-black ${stat.color} mb-1 tracking-tighter`}>{stat.value}</p>
@@ -326,9 +365,39 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
+                {/* Global Location Filters */}
+                <div className="mb-8 flex flex-col sm:flex-row items-center gap-4 glass-card p-4 relative z-10">
+                    <div className="flex items-center gap-3">
+                        <span className="p-2 bg-slate-900 rounded-xl text-white text-xs">🗺️</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">Location Controls</span>
+                    </div>
+                    <div className="h-6 w-px bg-border hidden sm:block"></div>
+                    <input 
+                        type="text" 
+                        placeholder="Filter by District / City..." 
+                        className="premium-input !py-2 !text-sm flex-1 max-w-sm"
+                        value={districtFilter}
+                        onChange={(e) => setDistrictFilter(e.target.value)}
+                    />
+                    <button 
+                        onClick={() => setSortByLocation(!sortByLocation)}
+                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-colors border ${sortByLocation ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                    >
+                        {sortByLocation ? 'Sort: By District (A-Z)' : 'Sort: Newest First'}
+                    </button>
+                    {(districtFilter || sortByLocation) && (
+                        <button 
+                            onClick={() => { setDistrictFilter(''); setSortByLocation(false); }}
+                            className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-700 underline underline-offset-2 ml-2"
+                        >
+                            Clear Filters
+                        </button>
+                    )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     {/* Notification Panel */}
-                    <Card className="glass-card p-8 h-96 overflow-hidden flex flex-col">
+                    <Card className="glass-card p-5 md:p-8 h-96 overflow-hidden flex flex-col">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
                                 <span className="p-2 bg-slate-900 rounded-xl text-white text-xs">🔔</span>
@@ -362,18 +431,18 @@ export default function AdminDashboard() {
                     </Card>
 
                     {/* Live SOS Alerts */}
-                    <Card className="glass-card p-8 h-96 overflow-hidden flex flex-col">
+                    <Card className="glass-card p-5 md:p-8 h-96 overflow-hidden flex flex-col">
                         <div className="flex items-center gap-3 mb-6">
                             <span className="p-2 bg-rose-600 rounded-xl text-white text-xs">🆘</span>
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">{t('adminDashboard.sosAlerts')}</h3>
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide">
-                            {sosAlerts.length === 0 ? (
+                            {processedSOS.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-3 grayscale opacity-40">
                                     <span className="text-4xl">😴</span>
-                                    <p className="text-[9px] font-black uppercase tracking-widest">{t('adminDashboard.noSOS')}</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest">{districtFilter ? 'NO MATCHING SOS' : t('adminDashboard.noSOS')}</p>
                                 </div>
-                            ) : sosAlerts.slice(0, 8).map((sos, i) => (
+                            ) : processedSOS.slice(0, 8).map((sos, i) => (
                                 <div key={sos._id || i} className={`p-4 rounded-3xl border-2 transition-colors ${sos.resolved ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50 border-rose-100 shadow-md'}`}>
                                     <div className="flex items-center justify-between mb-2">
                                         <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{sos.userName || 'Anonymous'}</p>
@@ -404,8 +473,8 @@ export default function AdminDashboard() {
 
                 {/* Resource Management */}
                 <div className="mb-12">
-                    <Card className="glass-card p-10 relative overflow-hidden">
-                        <div className="flex items-center justify-between mb-10 relative z-10">
+                    <Card className="glass-card p-6 md:p-10 relative overflow-hidden">
+                        <div className="flex items-center justify-between mb-8 md:mb-10 relative z-10">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-2xl shadow-xl">
                                     🚒
@@ -421,9 +490,9 @@ export default function AdminDashboard() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 relative z-10">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 relative z-10">
                             {/* New Resource Form */}
-                            <div className="bg-slate-50/50 rounded-3xl p-8 border border-slate-100">
+                            <div className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-100">
                                 <div className="mb-6 flex items-center gap-3">
                                     <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Add New Intel</span>
                                     <div className="h-px flex-1 bg-slate-200" />
@@ -479,20 +548,26 @@ export default function AdminDashboard() {
                 {/* Resource Map — lazy loaded */}
                 <div className="mb-8">
                     <Suspense fallback={<SectionLoader />}>
-                        <LazyResourceMap resources={resources} onToggleFood={handleToggleFood} />
+                        <LazyResourceMap 
+                            resources={resources} 
+                            onToggleFood={handleToggleFood} 
+                            sosAlerts={processedSOS} 
+                            complaints={processedComplaints} 
+                            reports={processedReports} 
+                        />
                     </Suspense>
                 </div>
 
                 {/* Live Complaints */}
-                <Card className="glass-card p-10 mb-12 relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-8 relative z-10">
+                <Card className="glass-card p-6 md:p-10 mb-12 relative overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 relative z-10">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-2xl shadow-xl shadow-amber-500/20 ring-4 ring-white">
+                            <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-xl shadow-amber-500/20 ring-2 md:ring-4 ring-white">
                                 📝
                             </div>
                             <div>
-                                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.complaints')}</h3>
-                                <div className="flex items-center gap-3 mt-1.5">
+                                <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.complaints')}</h3>
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                     <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
                                         {pendingComplaints} {t('common.pending')}
                                     </span>
@@ -505,12 +580,12 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="space-y-4 overflow-y-auto max-h-[400px] pr-4 scrollbar-hide relative z-10">
-                        {complaints.length === 0 ? (
+                        {processedComplaints.length === 0 ? (
                             <div className="py-20 flex flex-col items-center justify-center grayscale opacity-30 text-slate-400 gap-4">
                                 <span className="text-5xl">📫</span>
-                                <p className="text-[10px] font-black uppercase tracking-widest">{t('adminDashboard.noComplaints')}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest">{districtFilter ? 'NO MATCHING COMPLAINTS' : t('adminDashboard.noComplaints')}</p>
                             </div>
-                        ) : complaints.slice(0, 10).map((c, i) => (
+                        ) : processedComplaints.slice(0, 10).map((c, i) => (
                             <div key={c._id || i} className={`p-6 rounded-[2rem] border transition-colors ${c.status === 'resolved' ? 'bg-emerald-50/50 border-emerald-100 opacity-60' : 'bg-white border-slate-100 shadow-sm'}`}>
                                 <div className="flex items-start justify-between gap-6">
                                     <div className="flex-1 min-w-0">
@@ -528,6 +603,35 @@ export default function AdminDashboard() {
                                                 {c.createdAt ? new Date(c.createdAt).toLocaleString() : 'N/A'}
                                             </span>
                                         </div>
+
+                                        {/* Complaint image attachment */}
+                                        {(c.imageUrl || c.image_url) && (
+                                            <div className="mt-4">
+                                                <a
+                                                    href={c.imageUrl || c.image_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-block group"
+                                                    title="View full image"
+                                                >
+                                                    <div className="relative rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
+                                                        <img
+                                                            src={c.imageUrl || c.image_url}
+                                                            alt="Complaint attachment"
+                                                            className="h-28 w-auto max-w-[220px] object-cover group-hover:scale-105 transition-transform duration-300"
+                                                        />
+                                                        <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition-colors flex items-center justify-center">
+                                                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-white uppercase tracking-widest bg-slate-900/60 px-3 py-1 rounded-full backdrop-blur-sm">
+                                                                View Full
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mt-1.5 flex items-center gap-1">
+                                                        <span>📎</span> Photo Attached
+                                                    </p>
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex-shrink-0">
                                         {c.status === 'pending' ? (
@@ -550,28 +654,28 @@ export default function AdminDashboard() {
                 </Card>
 
                 {/* Live Symptom Reports */}
-                <Card className="glass-card p-10 mb-12 relative overflow-hidden">
+                <Card className="glass-card p-6 md:p-10 mb-12 relative overflow-hidden">
                     <div className="flex items-center justify-between mb-8 relative z-10">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-2xl shadow-xl shadow-primary/20 ring-4 ring-white">
+                            <div className="w-10 h-10 md:w-12 md:h-12 bg-primary rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-xl shadow-primary/20 ring-2 md:ring-4 ring-white">
                                 🌡️
                             </div>
                             <div>
-                                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.symptomReports')}</h3>
+                                <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.symptomReports')}</h3>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
-                                    {symptomReports.length} {t('common.total')} REPORTS DETECTED
+                                    {processedReports.length} {t('common.total')} REPORTS DETECTED
                                 </p>
                             </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto max-h-[500px] pr-4 scrollbar-hide relative z-10">
-                        {symptomReports.length === 0 ? (
+                        {processedReports.length === 0 ? (
                             <div className="col-span-full py-20 flex flex-col items-center justify-center grayscale opacity-30 text-slate-400 gap-4">
                                 <span className="text-5xl">🕵️</span>
-                                <p className="text-[10px] font-black uppercase tracking-widest">{t('adminDashboard.noReports')}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest">{districtFilter ? 'NO MATCHING REPORTS' : t('adminDashboard.noReports')}</p>
                             </div>
-                        ) : symptomReports.slice(0, 12).map((r, i) => (
+                        ) : processedReports.slice(0, 12).map((r, i) => (
                             <div key={r._id || i} className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-center mb-4">
                                     <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{r.location}</p>
@@ -593,14 +697,14 @@ export default function AdminDashboard() {
 
                 {/* AI Briefing */}
                 {clusters?.aiBriefing && (
-                    <Card className="mb-12 glass-card p-10 relative overflow-hidden">
+                    <Card className="mb-12 glass-card p-6 md:p-10 relative overflow-hidden">
                         <div className="flex items-center justify-between mb-8 relative z-10">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-2xl shadow-xl shadow-slate-900/10">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-xl shadow-slate-900/10">
                                     🧠
                                 </div>
                                 <div>
-                                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
+                                    <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase">
                                         {t('adminDashboard.aiBriefing')}
                                     </h3>
                                     <div className="flex items-center gap-2 mt-1.5">
@@ -648,9 +752,9 @@ export default function AdminDashboard() {
                 </Suspense>
 
                 {/* Cluster alerts */}
-                <div className="flex items-center gap-4 mb-8 mt-12">
-                    <div className="w-10 h-10 bg-rose-600 rounded-2xl flex items-center justify-center text-lg shadow-lg shadow-rose-600/20">📡</div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.outbreakAlerts')}</h3>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 mt-12">
+                    <div className="w-10 h-10 bg-rose-600 rounded-2xl flex items-center justify-center text-lg shadow-lg shadow-rose-600/20 shrink-0">📡</div>
+                    <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.outbreakAlerts')}</h3>
                 </div>
 
                 {clusters?.clusters?.length === 0 && (
@@ -668,14 +772,14 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
                     {clusters?.clusters?.map((cluster, i) => {
                         const level = getLevel(cluster.confidence);
                         return (
-                            <Card key={i} className={`glass-card p-10 relative overflow-hidden border-l-[6px] ${level === 'high' ? 'border-l-rose-600' : level === 'medium' ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
-                                <div className="flex items-center justify-between mb-8 relative z-10">
+                            <Card key={i} className={`glass-card p-6 md:p-10 relative overflow-hidden border-l-[6px] ${level === 'high' ? 'border-l-rose-600' : level === 'medium' ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
+                                <div className="flex items-start md:items-center justify-between mb-8 relative z-10 flex-col md:flex-row gap-4">
                                     <div>
-                                        <h4 className="text-2xl font-black text-slate-900 tracking-tight uppercase mb-1">{cluster.area}</h4>
+                                        <h4 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase mb-1">{cluster.area}</h4>
                                         <div className="flex items-center gap-3">
                                             <div className={`w-2 h-2 rounded-full ${level === 'high' ? 'bg-rose-600 animate-pulse' : level === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{cluster.predictedDiseaseType}</p>

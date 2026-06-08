@@ -130,8 +130,8 @@ export default function Alerts() {
                                     </div>
 
                                     <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-blue-700">View Detailed Protocol</button>
-                                        <button className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">Share Update</button>
+                                        <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-blue-700">{t('userDashboard.viewDetailedProtocol')}</button>
+                                        <button className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">{t('userDashboard.shareUpdate')}</button>
                                     </div>
                                 </AnimatedCard>
                             );

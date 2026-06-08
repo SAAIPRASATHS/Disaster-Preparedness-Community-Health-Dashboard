@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const db = require('./db');
@@ -51,6 +52,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// ── Serve uploaded complaint images ──
+const uploadsPath = path.join(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadsPath));
+
 // ── Routes ──
 app.use('/api/auth', authRoutes);
 app.use('/api/risk', riskRoutes);
@@ -67,7 +72,6 @@ app.use('/api/pollen', pollenRoutes);
 app.use('/api/resources', resourceRoutes);
 
 // ── Serve React Frontend (Production) ──
-const path = require('path');
 const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
 
 // Serve static assets from the built React app

@@ -433,7 +433,7 @@ export default function MapView() {
                 <motion.h1
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-5xl font-black text-slate-900 mb-4 tracking-tight leading-tight"
+                    className="text-4xl md:text-5xl font-black text-slate-900 mb-4 tracking-tight leading-tight"
                 >
                     {t('map.title1')} <span className="bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">{t('map.title2')}</span>
                 </motion.h1>
@@ -456,9 +456,9 @@ export default function MapView() {
                         exit={{ opacity: 0, height: 0 }}
                         className="mb-8 overflow-hidden"
                     >
-                        <div className="bg-risk-high/5 border-2 border-risk-high/20 rounded-[2rem] px-8 py-6 flex items-center justify-between shadow-lg shadow-risk-high/5">
-                            <div className="flex items-center gap-5">
-                                <div className="p-3 bg-risk-high animate-pulse rounded-2xl shadow-lg shadow-risk-high/40">
+                        <div className="bg-risk-high/5 border-2 border-risk-high/20 rounded-3xl md:rounded-[2rem] px-5 py-4 md:px-8 md:py-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg shadow-risk-high/5">
+                            <div className="flex items-center gap-4 md:gap-5">
+                                <div className="p-2 md:p-3 bg-risk-high animate-pulse rounded-2xl shadow-lg shadow-risk-high/40">
                                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                 </div>
                                 <div>
@@ -475,7 +475,7 @@ export default function MapView() {
             </AnimatePresence>
 
             {/* Legend & Controls - Redefined as a clean glass tray */}
-            <div className="max-w-6xl mx-auto mb-8 p-4 glass-card rounded-[2.5rem] flex flex-wrap justify-center items-center gap-3 shadow-2xl relative z-[1000]">
+            <div className="max-w-6xl mx-auto mb-8 p-3 md:p-4 glass-card rounded-3xl md:rounded-[2.5rem] flex flex-wrap justify-center items-center gap-2 md:gap-3 shadow-2xl relative z-[1000]">
                 {[
                     { id: 'dangerZone', label: t('map.dangerZone'), color: 'bg-risk-high' },
                     { id: 'fire', label: t('map.fire'), color: 'bg-red-500' },
@@ -502,7 +502,7 @@ export default function MapView() {
                 <div className="w-px h-6 bg-slate-200 mx-2 hidden md:block" />
 
                 {/* Main Action Toggles */}
-                <div className="flex gap-3">
+                <div className="flex flex-wrap justify-center gap-2 md:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
                     <button
                         onClick={handleLocateMe}
                         className={`flex items-center gap-2.5 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-2xl border-2 transition-all duration-300 transform active:scale-95 bg-white border-slate-100 text-slate-900 shadow-sm hover:border-primary hover:text-primary`}
@@ -537,7 +537,7 @@ export default function MapView() {
                 </div>
             </div>
 
-            <div className="relative rounded-[3rem] overflow-hidden border-4 border-white shadow-2xl shadow-slate-200/50 group transition-all duration-500" style={{ height: '600px' }}>
+            <div className="relative rounded-3xl md:rounded-[3rem] overflow-hidden border-2 md:border-4 border-white shadow-2xl shadow-slate-200/50 group transition-all duration-500" style={{ height: '600px' }}>
                 <MapContainer
                     center={[11.0168, 76.9558]}
                     zoom={12}
@@ -658,9 +658,9 @@ export default function MapView() {
                         animate={{ opacity: 1, y: 0 }}
                         className="mt-20 max-w-7xl mx-auto px-4"
                     >
-                        <div className="flex flex-col md:flex-row items-baseline justify-between gap-4 mb-10 border-b-2 border-slate-100 pb-8">
+                        <div className="flex flex-col md:flex-row items-baseline justify-between gap-4 mb-8 md:mb-10 border-b-2 border-slate-100 pb-6 md:pb-8">
                             <div>
-                                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">
+                                <h3 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tighter">
                                     {t('map.hospitalsNearMe')}
                                 </h3>
                                 <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-3">
@@ -680,7 +680,7 @@ export default function MapView() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.1 }}
-                                    className="glass-card p-8 rounded-[2.5rem] flex flex-col group relative overflow-hidden"
+                                    className="glass-card p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] flex flex-col group relative overflow-hidden"
                                 >
                                     {/* Subtle distance glow */}
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10" />
