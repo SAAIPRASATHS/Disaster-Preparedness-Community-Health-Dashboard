@@ -166,7 +166,7 @@ async function fetchAndStoreAlerts() {
 
 function startAlertScheduler(socketIO) {
     io = socketIO;
-    console.log('🕐 Live Disaster Alert Scheduler started (5 min interval)');
+    console.log('🕐 Live Disaster Data Feed Scheduler started (5 min interval)');
     fetchAndStoreAlerts(); // Run immediately
     setInterval(fetchAndStoreAlerts, 5 * 60 * 1000);
 }
