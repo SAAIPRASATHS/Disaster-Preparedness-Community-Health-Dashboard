@@ -169,14 +169,18 @@ function EmergencyServicesLayer({ active, onLoading, filters }) {
 
             const data = await response.json();
 
-            const newMarkers = data.elements.map(element => ({
-                id: element.id,
-                lat: element.lat,
-                lon: element.lon,
-                type: element.tags.amenity === 'police' ? 'police' : 'fire',
-                name: element.tags.name || (element.tags.amenity === 'police' ? 'Police Station' : 'Fire Station'),
-                address: element.tags['addr:street'] || element.tags['addr:city'] || 'Nearby'
-            }));
+            const newMarkers = data.elements.map(element => {
+                const type = element.tags.amenity === 'police' ? 'police' : 'fire';
+                return {
+                    id: element.id,
+                    lat: element.lat,
+                    lon: element.lon,
+                    type: type,
+                    name: element.tags.name || (type === 'police' ? 'Police Station' : 'Fire Station'),
+                    address: element.tags['addr:street'] || element.tags['addr:city'] || 'Nearby',
+                    phone: element.tags.phone || element.tags['contact:phone'] || (type === 'police' ? '100 / 112' : '101')
+                };
+            });
 
             setMarkers(newMarkers);
 
@@ -221,12 +225,19 @@ function EmergencyServicesLayer({ active, onLoading, filters }) {
                 icon={marker.type === 'police' ? EMERGENCY_ICONS.police : EMERGENCY_ICONS.fire}
             >
                 <Popup>
-                    <div className="text-dark text-sm">
+                    <div className="text-dark text-sm w-48">
                         <p className="font-bold border-bottom pb-1 mb-1">
                             {marker.type === 'police' ? '👮 ' : '🚒 '}{marker.name}
                         </p>
                         <p className="text-xs text-secondary">{marker.address}</p>
                         <p className="text-[10px] text-primary mt-1 font-semibold uppercase">{marker.type} service</p>
+                        {marker.phone && (
+                            <div className="border-t pt-2 mt-2">
+                                <a href={`tel:${marker.phone.split(' / ')[0]}`} className="block bg-primary/10 text-primary py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center hover:bg-primary hover:text-white transition-colors">
+                                    Call {marker.phone}
+                                </a>
+                            </div>
+                        )}
                     </div>
                 </Popup>
             </Marker>

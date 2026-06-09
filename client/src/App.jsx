@@ -14,6 +14,7 @@ import AdminRoute from './components/AdminRoute';
 const RoleSelect = lazy(() => import('./pages/RoleSelect'));
 const Home = lazy(() => import('./pages/Home'));
 const Report = lazy(() => import('./pages/Report'));
+const EmergencyHealthWatch = lazy(() => import('./pages/EmergencyHealthWatch'));
 const FileComplaint = lazy(() => import('./pages/FileComplaint'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const UserDashboard = lazy(() => import('./pages/UserDashboard'));
@@ -60,11 +61,13 @@ export default function App() {
                                         <Route path="/citizen-login" element={<Login />} />
                                         <Route path="/register" element={<Register />} />
                                         <Route path="/admin-login" element={<AdminLogin />} />
-                                        <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
+                                        <Route path="/report" element={<ProtectedRoute><EmergencyHealthWatch /></ProtectedRoute>} />
+                                        <Route path="/health-watch" element={<ProtectedRoute><EmergencyHealthWatch /></ProtectedRoute>} />
                                         <Route path="/file-complaint" element={<ProtectedRoute><FileComplaint /></ProtectedRoute>} />
                                         <Route path="/user-dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
                                         <Route path="/citizen-dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
                                         <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                                        <Route path="/admin/community-hub" element={<AdminRoute><Report /></AdminRoute>} />
                                         <Route path="/map" element={<MapView />} />
                                         <Route path="/alerts" element={<Alerts />} />
                                         <Route path="/bot" element={<BotPage />} />

@@ -653,15 +653,49 @@ export default function AdminDashboard() {
                     </div>
                 </Card>
 
-                {/* Live Symptom Reports */}
-                <Card className="glass-card p-6 md:p-10 mb-12 relative overflow-hidden">
+                {/* API Source Health Monitoring */}
+                <Card className="glass-card p-6 md:p-10 mb-12 relative overflow-hidden" id="api-health">
                     <div className="flex items-center justify-between mb-8 relative z-10">
                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 md:w-12 md:h-12 bg-primary rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-xl shadow-primary/20 ring-2 md:ring-4 ring-white">
-                                🌡️
+                            <div className="w-10 h-10 md:w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-xl shadow-slate-900/20 ring-2 md:ring-4 ring-white">
+                                🔌
                             </div>
                             <div>
-                                <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.symptomReports')}</h3>
+                                <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.apiHealthTitle')}</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
+                                    {t('adminDashboard.apiHealthSubtitle')}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                            { name: 'IMD / GDACS', status: '✅ Active', time: t('adminDashboard.syncEvery5Mins'), endpoint: 'gdacs.org/xml/rss' },
+                            { name: 'USGS Seismology', status: '✅ Active', time: t('adminDashboard.syncEvery5Mins'), endpoint: 'earthquake.usgs.gov' },
+                            { name: 'DisasterPrep AI', status: '✅ Active', time: t('adminDashboard.syncLive'), endpoint: 'Local Engine' },
+                            { name: 'WebSocket Node', status: '🟢 Connected', time: t('adminDashboard.syncPersistent'), endpoint: 'wss://localhost:5000' }
+                        ].map((api, i) => (
+                            <div key={i} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                                <div className="flex justify-between items-center mb-3">
+                                    <p className="text-xs font-black text-slate-800 uppercase">{api.name}</p>
+                                    <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">{api.status}</span>
+                                </div>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Sync: {api.time}</p>
+                                <p className="text-[9px] font-bold text-slate-400 truncate">{api.endpoint}</p>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+
+                {/* Community Health Hub */}
+                <Card className="glass-card p-6 md:p-10 mb-12 relative overflow-hidden" id="health">
+                    <div className="flex items-center justify-between mb-8 relative z-10">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 md:w-12 h-12 bg-gradient-to-br from-primary to-indigo-600 rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-xl shadow-primary/20 ring-2 md:ring-4 ring-white">
+                                🏥
+                            </div>
+                            <div>
+                                <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase">{t('adminDashboard.communityHealthHub')}</h3>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
                                     {processedReports.length} {t('common.total')} REPORTS DETECTED
                                 </p>
@@ -677,18 +711,35 @@ export default function AdminDashboard() {
                             </div>
                         ) : processedReports.slice(0, 12).map((r, i) => (
                             <div key={r._id || i} className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex justify-between items-center mb-4">
+                                <div className="flex justify-between items-start mb-3">
                                     <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{r.location}</p>
-                                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">{r.createdAt ? new Date(r.createdAt).toLocaleTimeString() : ''}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[8px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest ${
+                                            r.severity === 'severe' ? 'bg-red-100 text-red-600' :
+                                            r.severity === 'moderate' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
+                                        }`}>{r.severity || 'mild'}</span>
+                                        <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">{r.createdAt ? new Date(r.createdAt).toLocaleTimeString() : ''}</span>
+                                    </div>
                                 </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {r.symptoms.map(s => (
-                                        <span key={s} className="px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">{s}</span>
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {r.symptoms?.map(s => (
+                                        <span key={s} className="px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">{s.replace(/_/g,' ')}</span>
                                     ))}
                                 </div>
-                                <div className="mt-6 pt-4 border-t border-slate-50 flex items-center gap-2">
-                                    <div className="w-5 h-5 bg-slate-100 rounded-lg flex items-center justify-center text-[10px]">👤</div>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{r.userName || 'Citizen'}</p>
+                                {r.aiCondition && (
+                                    <div className="bg-indigo-50 rounded-xl p-3 mb-3">
+                                        <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">AI Assessment</p>
+                                        <p className="text-[10px] font-black text-indigo-800">{r.aiCondition} · <span className={r.aiRiskLevel === 'High' || r.aiRiskLevel === 'Critical' ? 'text-red-600' : 'text-amber-600'}>{r.aiRiskLevel} Risk</span></p>
+                                    </div>
+                                )}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 bg-slate-100 rounded-lg flex items-center justify-center text-[10px]">👤</div>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{r.userName || 'Citizen'}</p>
+                                    </div>
+                                    <span className={`text-[8px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest ${
+                                        r.status === 'resolved' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-700'
+                                    }`}>{r.status?.replace(/_/g,' ') || 'Pending Analysis'}</span>
                                 </div>
                             </div>
                         ))}

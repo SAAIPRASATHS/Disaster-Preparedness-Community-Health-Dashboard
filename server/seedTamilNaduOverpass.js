@@ -8,9 +8,9 @@
  */
 
 require('dotenv').config();
-const mongoose = require('mongoose');
 const axios = require('axios');
 const Resource = require('./models/Resource');
+const db = require('./db');
 
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
@@ -74,6 +74,48 @@ const QUERIES = [
             );
             out center meta;
         `
+    },
+    {
+        label: '🏨 Hotels & Accommodations',
+        type: 'hotel',
+        query: `
+            [out:json][timeout:1800];
+            rel["name"="Tamil Nadu"]["boundary"="administrative"]["admin_level"="4"];
+            map_to_area -> .searchArea;
+            (
+              node["tourism"="hotel"](area.searchArea);
+              way["tourism"="hotel"](area.searchArea);
+            );
+            out center meta;
+        `
+    },
+    {
+        label: '🏛️ Government Offices',
+        type: 'government_office',
+        query: `
+            [out:json][timeout:1800];
+            rel["name"="Tamil Nadu"]["boundary"="administrative"]["admin_level"="4"];
+            map_to_area -> .searchArea;
+            (
+              node["office"="government"](area.searchArea);
+              way["office"="government"](area.searchArea);
+            );
+            out center meta;
+        `
+    },
+    {
+        label: '🆘 Rescue / Community Centers',
+        type: 'rescue_center',
+        query: `
+            [out:json][timeout:1800];
+            rel["name"="Tamil Nadu"]["boundary"="administrative"]["admin_level"="4"];
+            map_to_area -> .searchArea;
+            (
+              node["amenity"~"community_centre|social_facility|shelter"](area.searchArea);
+              way["amenity"~"community_centre|social_facility|shelter"](area.searchArea);
+            );
+            out center meta;
+        `
     }
 ];
 
@@ -88,7 +130,16 @@ function parseElement(el, type) {
     const name = tags.name || tags['name:en'] || tags['name:ta'] || null;
     if (!name) return null; // skip unnamed entries
 
-    const phone = tags.phone || tags['contact:phone'] || tags['contact:mobile'] || '';
+    let phone = tags.phone || tags['contact:phone'] || tags['contact:mobile'] || '';
+    
+    // Fallback to Tamil Nadu State emergency numbers if no specific contact is found
+    if (!phone) {
+        if (type === 'fire_station') phone = '101';
+        else if (type === 'police_station') phone = '100 / 112';
+        else if (type === 'hospital') phone = '108';
+        else if (type === 'rescue_center') phone = '1070 / 1077';
+    }
+
     const street = tags['addr:street'] || '';
     const city = tags['addr:city'] || tags['addr:suburb'] || '';
     const district = tags['addr:district'] || '';
@@ -103,7 +154,11 @@ async function fetchOverpass(query, label) {
     for (let attempt = 1; attempt <= 3; attempt++) {
         try {
             const response = await axios.post(OVERPASS_URL, `data=${encodeURIComponent(query)}`, {
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json',
+                    'User-Agent': 'DisasterPrepDashboard/1.0'
+                },
                 timeout: 300000, // 5 min timeout
             });
             const elements = response.data.elements || [];
@@ -124,8 +179,7 @@ async function fetchOverpass(query, label) {
 // ── Main Seed Function ──
 async function seed() {
     try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('✅ Connected to MongoDB');
+        console.log('✅ Started Overpass Seed (PostgreSQL)');
 
         let totalAdded = 0, totalSkipped = 0;
 
@@ -141,8 +195,8 @@ async function seed() {
                 const batch = parsed.slice(i, i + 100);
 
                 for (const svc of batch) {
-                    const exists = await Resource.findOne({ name: svc.name, type: svc.type });
-                    if (exists) {
+                    const { rows } = await db.query('SELECT id FROM resources WHERE name = $1 AND type = $2 LIMIT 1', [svc.name, svc.type]);
+                    if (rows.length > 0) {
                         skipped++;
                         continue;
                     }
@@ -152,14 +206,9 @@ async function seed() {
                         type: svc.type,
                         address: svc.address,
                         contact: svc.contact,
-                        location: {
-                            type: 'Point',
-                            coordinates: [svc.lon, svc.lat] // GeoJSON [lng, lat]
-                        },
-                        status: {
-                            foodAvailable: svc.type === 'food_point',
-                            lastUpdated: new Date()
-                        }
+                        lat: svc.lat,
+                        lng: svc.lon,
+                        food_available: svc.type === 'food_point'
                     });
                     added++;
                 }

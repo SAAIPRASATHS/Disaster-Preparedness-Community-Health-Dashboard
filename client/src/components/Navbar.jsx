@@ -17,14 +17,19 @@ export default function Navbar() {
         setMobileOpen(false);
     };
 
-    const links = [
-        { to: '/home',            label: t('nav.riskCheck'),   show: true },
-        { to: '/user-dashboard',  label: t('nav.myDashboard'), show: isAuthenticated && !isAdmin },
-        { to: '/admin-dashboard', label: t('nav.adminPanel'),  show: isAdmin },
-        { to: '/report',          label: t('nav.report'),      show: isAuthenticated },
-        { to: '/map',             label: t('nav.map'),         show: true },
-        { to: '/alerts',          label: t('nav.alerts'),      show: true },
-        { to: '/bot',             label: t('nav.bot'),         show: true },
+    const links = isAdmin ? [
+        { to: '/admin-dashboard', label: t('nav.adminDashboard'),  show: true },
+        { to: '/admin/community-hub', label: t('nav.healthHub'), show: true },
+        { to: '/alerts',          label: t('nav.alerts'),          show: true },
+        { to: '/map',             label: t('nav.map'),             show: true },
+        { to: '/bot',             label: t('nav.bot'),             show: true },
+    ] : [
+        { to: '/home',            label: t('nav.riskCheck'),       show: true },
+        { to: '/user-dashboard',  label: t('nav.myDashboard'),     show: isAuthenticated },
+        { to: '/health-watch',    label: t('nav.healthWatch'),     show: isAuthenticated },
+        { to: '/map',             label: t('nav.map'),             show: true },
+        { to: '/alerts',          label: t('nav.alerts'),          show: true },
+        { to: '/bot',             label: t('nav.bot'),             show: true },
     ].filter((l) => l.show);
 
     const linkClass = ({ isActive }) =>

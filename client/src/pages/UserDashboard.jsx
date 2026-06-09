@@ -479,6 +479,58 @@ export default function UserDashboard() {
                         </button>
                     </div>
 
+                    {/* Emergency Contacts directory */}
+                    <div className="glass-card p-5 md:p-8 border-2 border-rose-500/10 shadow-lg shadow-rose-500/5">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-black text-slate-900 tracking-tight">Tamil Nadu Emergency Contacts</h3>
+                            <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">24/7 Toll Free</span>
+                        </div>
+                        <div className="space-y-3">
+                            <a href="tel:112" className="flex items-center justify-between p-3 rounded-xl bg-rose-50 hover:bg-rose-100 transition-colors border border-rose-100">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-lg">🏥</span>
+                                    <span className="text-xs font-bold text-rose-900">Integrated Emergency Response</span>
+                                </div>
+                                <span className="text-sm font-black text-rose-600">112</span>
+                            </a>
+                            <a href="tel:101" className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-lg">🚒</span>
+                                    <span className="text-xs font-bold text-slate-700">Fire & Rescue Services</span>
+                                </div>
+                                <span className="text-sm font-black text-slate-900">101</span>
+                            </a>
+                            <a href="tel:100" className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-lg">👮</span>
+                                    <span className="text-xs font-bold text-slate-700">Police Emergency</span>
+                                </div>
+                                <span className="text-sm font-black text-slate-900">100 / 112</span>
+                            </a>
+                            <a href="tel:108" className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-lg">🏥</span>
+                                    <span className="text-xs font-bold text-slate-700">Ambulance</span>
+                                </div>
+                                <span className="text-sm font-black text-slate-900">108</span>
+                            </a>
+                            <a href="tel:1070" className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-lg">🛟</span>
+                                    <span className="text-xs font-bold text-slate-700">Disaster Management (State)</span>
+                                </div>
+                                <span className="text-sm font-black text-slate-900">1070</span>
+                            </a>
+                            <a href="tel:1077" className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-lg">🛟</span>
+                                    <span className="text-xs font-bold text-slate-700">Disaster Management (District)</span>
+                                </div>
+                                <span className="text-sm font-black text-slate-900">1077</span>
+                            </a>
+                        </div>
+                    </div>
+
                     {/* Recent Alerts List */}
                     <div className="glass-card p-5 md:p-8">
                         <div className="flex items-center justify-between mb-6 md:mb-8">

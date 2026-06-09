@@ -18,24 +18,25 @@ const SYMPTOM_ICONS = {
     breathing_issue: '😮‍💨',
 };
 
-const SEVERITY_BY_COUNT = (n) => {
-    if (n >= 4) return { label: 'Critical', cls: 'bg-rose-100 text-rose-700 border-rose-200' };
-    if (n >= 2) return { label: 'Moderate', cls: 'bg-amber-100 text-amber-700 border-amber-200' };
-    return { label: 'Low', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
-};
-
 function AdminReportsView() {
     const { t } = useTranslation();
+
+    const SEVERITY_BY_COUNT = (n) => {
+        if (n >= 4) return { label: t('reportView.severityCritical'), cls: 'bg-rose-100 text-rose-700 border-rose-200' };
+        if (n >= 2) return { label: t('reportView.severityModerate'), cls: 'bg-amber-100 text-amber-700 border-amber-200' };
+        return { label: t('reportView.severityLow'), cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+    };
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filterSymptom, setFilterSymptom] = useState('all');
+    const [sortBy, setSortBy] = useState('latest');
     const toast = useToast();
 
     useEffect(() => {
         fetchReports()
             .then(({ data }) => setReports(Array.isArray(data) ? data : []))
-            .catch(() => toast.error('Failed to load reports'))
+            .catch(() => toast.error(t('reportView.failedLoadReports')))
             .finally(() => setLoading(false));
     }, []);
 
@@ -49,6 +50,11 @@ function AdminReportsView() {
         const matchSymptom =
             filterSymptom === 'all' || (r.symptoms || []).includes(filterSymptom);
         return matchSearch && matchSymptom;
+    }).sort((a, b) => {
+        if (sortBy === 'district') {
+            return (a.location || '').localeCompare(b.location || '');
+        }
+        return new Date(b.createdAt) - new Date(a.createdAt);
     });
 
     return (
@@ -81,7 +87,7 @@ function AdminReportsView() {
                         { label: t('reportView.totalReports'), value: reports.length, icon: '📊', color: 'text-primary', bg: 'bg-blue-50' },
                         { label: t('reportView.uniqueLocations'), value: new Set(reports.map((r) => r.location)).size, icon: '📍', color: 'text-rose-600', bg: 'bg-rose-50' },
                         { label: t('reportView.today'), value: reports.filter((r) => new Date(r.createdAt).toDateString() === new Date().toDateString()).length, icon: '📅', color: 'text-amber-600', bg: 'bg-amber-50' },
-                        { label: t('reportView.mostCommon'), value: allSymptoms[0] ? SYMPTOM_ICONS[allSymptoms[0]] + ' ' + allSymptoms[0].replace('_', ' ') : 'N/A', icon: '⚠️', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                        { label: t('reportView.mostCommon'), value: allSymptoms[0] ? (SYMPTOM_ICONS[allSymptoms[0]] || '🔹') + ' ' + t(`symptoms.${allSymptoms[0]}`) : 'N/A', icon: '⚠️', color: 'text-emerald-600', bg: 'bg-emerald-50' },
                     ].map((s, i) => (
                         <AnimatedCard key={i} delay={i * 0.05}>
                             <div className="glass-card p-6 flex flex-col">
@@ -109,8 +115,16 @@ function AdminReportsView() {
                     >
                         <option value="all">{t('reportView.allSymptoms')}</option>
                         {allSymptoms.map((s) => (
-                            <option key={s} value={s}>{SYMPTOM_ICONS[s] || '🔹'} {s.replace('_', ' ')}</option>
+                            <option key={s} value={s}>{SYMPTOM_ICONS[s] || '🔹'} {t(`symptoms.${s}`) || s.replace('_', ' ')}</option>
                         ))}
+                    </select>
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="premium-input text-xs sm:w-48"
+                    >
+                        <option value="latest">{t('reportView.sortLatest') || 'Sort by Latest'}</option>
+                        <option value="district">{t('reportView.sortDistrict') || 'Sort by District'}</option>
                     </select>
                 </div>
 
@@ -140,7 +154,7 @@ function AdminReportsView() {
                                                     </div>
                                                     <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full">
                                                         <span className="text-[10px]">👤</span>
-                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{r.userName || 'Citizen'}</span>
+                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{r.userName || t('reportView.citizen')}</span>
                                                     </div>
                                                     <span className="text-[9px] font-bold text-slate-400">
                                                         {r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A'}
@@ -150,7 +164,7 @@ function AdminReportsView() {
                                                     {(r.symptoms || []).map((s) => (
                                                         <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest shadow-sm">
                                                             <span>{SYMPTOM_ICONS[s] || '🔹'}</span>
-                                                            {s.replace('_', ' ')}
+                                                            {t(`symptoms.${s}`) || s.replace('_', ' ')}
                                                         </span>
                                                     ))}
                                                 </div>
@@ -235,20 +249,20 @@ function CitizenReportForm() {
                         <div className="flex-1">
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                                <span className="text-green-300 text-xs font-semibold uppercase tracking-widest">Community Health Network Active</span>
+                                <span className="text-green-300 text-xs font-semibold uppercase tracking-widest">{t('reportView.communityNetworkActive')}</span>
                             </div>
                             <h1 className="text-2xl md:text-3xl font-extrabold text-white mb-2 tracking-tight">
                                 {t('report.title1')} <span className="text-yellow-300">{t('report.title2')}</span>
                             </h1>
                             <p className="text-indigo-100 text-sm font-medium leading-relaxed max-w-lg">
-                                {t('report.subtitle')} Your anonymous report is analysed by our AI to detect outbreaks before they spread.
+                                {t('report.subtitle')} {t('reportView.reportSubtitleAI')}
                             </p>
                         </div>
                         <div className="flex gap-4 flex-wrap">
                             {[
-                                { num: '2 min', label: 'To Report' },
-                                { num: '100%', label: 'Anonymous' },
-                                { num: '24/7',  label: 'Monitored' },
+                                { num: t('reportView.stat2min'), label: t('reportView.statLabelToReport') },
+                                { num: t('reportView.stat100pct'), label: t('reportView.statLabelAnon') },
+                                { num: t('reportView.stat247'),  label: t('reportView.statLabelMonitored') },
                             ].map((s) => (
                                 <div key={s.label} className="text-center px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20">
                                     <p className="text-2xl font-extrabold text-white">{s.num}</p>
@@ -307,7 +321,7 @@ function CitizenReportForm() {
                                     </div>
                                     {symptoms.length > 0 && (
                                         <p className="text-xs text-rose-500 font-semibold mt-2">
-                                            {symptoms.length} symptom{symptoms.length > 1 ? 's' : ''} selected
+                                            {symptoms.length > 1 ? t('reportView.symptomsSelectedPlural', { count: symptoms.length }) : t('reportView.symptomsSelected', { count: symptoms.length })}
                                         </p>
                                     )}
                                 </div>

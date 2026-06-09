@@ -25,13 +25,29 @@ CREATE TABLE IF NOT EXISTS sos_alerts (
 );
 
 CREATE TABLE IF NOT EXISTS symptom_reports (
-  id          SERIAL PRIMARY KEY,
-  user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  user_name   VARCHAR(255) DEFAULT 'Citizen',
-  location    VARCHAR(255) NOT NULL,
-  symptoms    TEXT[] NOT NULL,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+  id            SERIAL PRIMARY KEY,
+  user_id       INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  user_name     VARCHAR(255) DEFAULT 'Citizen',
+  location      VARCHAR(255) NOT NULL,
+  symptoms      TEXT[] NOT NULL,
+  age_group     VARCHAR(30) DEFAULT 'adult',
+  severity      VARCHAR(20) DEFAULT 'mild' CHECK (severity IN ('mild', 'moderate', 'severe')),
+  duration      VARCHAR(30) DEFAULT 'less_than_1_day',
+  status        VARCHAR(30) DEFAULT 'pending_analysis',
+  ai_condition  VARCHAR(255) DEFAULT NULL,
+  ai_risk_level VARCHAR(20) DEFAULT NULL,
+  ai_recommendation TEXT DEFAULT NULL,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add new columns to existing table if they don't exist
+ALTER TABLE symptom_reports ADD COLUMN IF NOT EXISTS age_group VARCHAR(30) DEFAULT 'adult';
+ALTER TABLE symptom_reports ADD COLUMN IF NOT EXISTS severity VARCHAR(20) DEFAULT 'mild';
+ALTER TABLE symptom_reports ADD COLUMN IF NOT EXISTS duration VARCHAR(30) DEFAULT 'less_than_1_day';
+ALTER TABLE symptom_reports ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'pending_analysis';
+ALTER TABLE symptom_reports ADD COLUMN IF NOT EXISTS ai_condition VARCHAR(255) DEFAULT NULL;
+ALTER TABLE symptom_reports ADD COLUMN IF NOT EXISTS ai_risk_level VARCHAR(20) DEFAULT NULL;
+ALTER TABLE symptom_reports ADD COLUMN IF NOT EXISTS ai_recommendation TEXT DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS complaints (
   id          SERIAL PRIMARY KEY,
@@ -77,3 +93,28 @@ CREATE INDEX IF NOT EXISTS idx_sos_alerts_created ON sos_alerts(created_at);
 CREATE INDEX IF NOT EXISTS idx_sos_alerts_address ON sos_alerts(address);
 
 CREATE INDEX IF NOT EXISTS idx_resources_lat_lng ON resources(lat, lng);
+
+-- ── Disaster Alerts (Enhanced) ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS disaster_alerts (
+  id              SERIAL PRIMARY KEY,
+  title           VARCHAR(500) NOT NULL,
+  description     TEXT NOT NULL,
+  source          VARCHAR(255) DEFAULT 'NDMA',
+  disaster_type   VARCHAR(50) NOT NULL,
+  severity        VARCHAR(20) DEFAULT 'MEDIUM' CHECK (severity IN ('LOW','MEDIUM','HIGH','CRITICAL')),
+  district        VARCHAR(255),
+  state           VARCHAR(100) DEFAULT 'Tamil Nadu',
+  latitude        NUMERIC(10,7),
+  longitude       NUMERIC(10,7),
+  issued_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW(),
+  alert_status    VARCHAR(20) DEFAULT 'ACTIVE' CHECK (alert_status IN ('ACTIVE','RESOLVED')),
+  external_id     VARCHAR(255) UNIQUE,
+  is_ai           BOOLEAN DEFAULT false,
+  reference_link  VARCHAR(500)
+);
+
+CREATE INDEX IF NOT EXISTS idx_disaster_alerts_issued ON disaster_alerts(issued_at DESC);
+CREATE INDEX IF NOT EXISTS idx_disaster_alerts_status ON disaster_alerts(alert_status);
+CREATE INDEX IF NOT EXISTS idx_disaster_alerts_district ON disaster_alerts(district);
+

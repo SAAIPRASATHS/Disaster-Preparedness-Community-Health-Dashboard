@@ -5,6 +5,7 @@ const path = require('path');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const db = require('./db');
+const { startAlertScheduler } = require('./services/disasterAlertService');
 
 const { verifyToken, verifyAdmin } = require('./middleware/auth');
 
@@ -104,6 +105,9 @@ async function start() {
         // Quick connection test
         const result = await db.query('SELECT NOW()');
         console.log('✅ PostgreSQL connected at:', result.rows[0].now);
+
+        // Start real-time disaster alerts scheduler
+        startAlertScheduler(io);
 
         server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (with Socket.IO)`));
     } catch (err) {
